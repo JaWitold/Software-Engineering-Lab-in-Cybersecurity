@@ -21,6 +21,8 @@ Example:
     range.
 """
 
+from random import randint
+from py_ecc.bn128 import curve_order
 from Crypto.Hash import keccak
 from eth_abi import encode
 
@@ -53,6 +55,41 @@ def encode_packed(*args):
 
     return encode(types, values)
 
+def randsn():
+    """
+    Generate a random integer between 1 and `curve_order - 1`.
+
+    Returns:
+        int: A random integer.
+    """
+    return randint(1, curve_order - 1)
+
+def addmodn(x, y):
+    """
+    Compute the result of `(x + y) % curve_order`.
+
+    Args:
+        x (int): The first integer.
+        y (int): The second integer.
+
+    Returns:
+        int: The result of `(x + y) % curve_order`.
+    """
+    return (x + y) % curve_order
+
+def mulmodn(x, y):
+    """
+    Compute the result of `(x * y) % curve_order`.
+
+    Args:
+        x (int): The first integer.
+        y (int): The second integer.
+
+    Returns:
+        int: The result of `(x * y) % curve_order`.
+    """
+    return (x * y) % curve_order
+
 
 if __name__ == "__main__":
     # Define the uint256 values
@@ -61,11 +98,11 @@ if __name__ == "__main__":
     MESSAGE = 0x1222  # Example uint256 value
 
     # Perform the encoding
-    encoded_packed_bytes = encode_packed(X_0, X_1, MESSAGE)
-    print(encoded_packed_bytes.hex())
+    ENCODED_PACKED_BYTES = encode_packed(X_0, X_1, MESSAGE)
+    print(ENCODED_PACKED_BYTES.hex())
 
     # Compute the hash
-    hash_bytes = keccak256(encoded_packed_bytes)
+    hash_bytes = keccak256(ENCODED_PACKED_BYTES)
 
     # Convert hash to integer and apply modulus
     GEN_ORDER = 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
