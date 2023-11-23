@@ -11,7 +11,7 @@ Functions:
     or strings, and encodes them into a concatenated byte string without
     padding.
 
-The module uses the `struct` library to handle byte-level conversions
+The module uses the `eth_api` library to handle byte-level conversions
 and the `Crypto.Hash` library to compute keccak256 hashes.
 
 Example:
@@ -19,18 +19,12 @@ Example:
     then compute their keccak256 hash. The hash can be further processed as
     needed, such as applying a modulus to convert it into a specific integer
     range.
-
-Note:
-    The encode_packed function in this module currently assumes that integer
-    arguments are to be packed as unsigned 32-bit integers ('I' in struct
-    format). This might need to be adjusted to match the actual size of
-    uint256 in Solidity (which is an unsigned 256-bit integer). Additional
-    handling for other data types should be implemented as needed.
 """
 
-import struct
+from random import randint
+from py_ecc.bn128 import curve_order
 from Crypto.Hash import keccak
-
+from eth_abi import encode
 
 def keccak256(arg):
     """Compute the keccak256 hash of the given arguments."""
@@ -45,19 +39,56 @@ def encode_packed(*args):
     Replicates Solidity's `abi.encodePacked`. This function takes any number
     of uint256 arguments and encodes them as a concatenated byte string.
     """
-    byte_array = bytearray()
+    types = []
+    values = []
+
     for arg in args:
         if isinstance(arg, int):
             # Handle integers
-            byte_array.extend(struct.pack('I', arg))
-        elif isinstance(arg, float):
-            # Handle floats
-            byte_array.extend(struct.pack('f', arg))
+            types.append('uint256')
+            values.append(arg)
         elif isinstance(arg, str):
             # Handle strings (you must decide on the encoding)
-            byte_array.extend(arg.encode('utf-8'))
+            types.append('bytes32')
+            values.append(arg.encode('utf-8'))
             # Add other data types as needed
-    return byte_array
+
+    return encode(types, values)
+
+def randsn():
+    """
+    Generate a random integer between 1 and `curve_order - 1`.
+
+    Returns:
+        int: A random integer.
+    """
+    return randint(1, curve_order - 1)
+
+def addmodn(x, y):
+    """
+    Compute the result of `(x + y) % curve_order`.
+
+    Args:
+        x (int): The first integer.
+        y (int): The second integer.
+
+    Returns:
+        int: The result of `(x + y) % curve_order`.
+    """
+    return (x + y) % curve_order
+
+def mulmodn(x, y):
+    """
+    Compute the result of `(x * y) % curve_order`.
+
+    Args:
+        x (int): The first integer.
+        y (int): The second integer.
+
+    Returns:
+        int: The result of `(x * y) % curve_order`.
+    """
+    return (x * y) % curve_order
 
 
 if __name__ == "__main__":
@@ -67,14 +98,13 @@ if __name__ == "__main__":
     MESSAGE = 0x1222  # Example uint256 value
 
     # Perform the encoding
-    encoded_packed_bytes = encode_packed(X_0, X_1, MESSAGE)
-    print(encoded_packed_bytes.hex())
+    ENCODED_PACKED_BYTES = encode_packed(X_0, X_1, MESSAGE)
+    print(ENCODED_PACKED_BYTES.hex())
 
     # Compute the hash
-    hash_bytes = keccak256(encoded_packed_bytes)
+    hash_bytes = keccak256(ENCODED_PACKED_BYTES)
 
     # Convert hash to integer and apply modulus
     GEN_ORDER = 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
     h = int.from_bytes(hash_bytes, byteorder="big") % GEN_ORDER
-
     print(h)
