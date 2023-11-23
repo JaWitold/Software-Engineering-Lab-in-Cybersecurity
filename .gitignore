@@ -1,3 +1,5 @@
 contracts/**/*.js
 contracts/bin/
 .idea/
+
+**/__pycache__/
