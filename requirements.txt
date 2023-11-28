@@ -1,0 +1,4 @@
+web3>=6.11.2 
+py-solc-x>=1.1.1
+python-dotenv>=1.0.0
+py_ecc>=6.0.0

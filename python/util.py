@@ -22,9 +22,9 @@ Example:
 """
 
 from random import randint
-from py_ecc.bn128 import curve_order
+from py_ecc.bn128.bn128_curve import curve_order
 from Crypto.Hash import keccak
-from eth_abi import encode
+from eth_abi.abi import encode
 
 def keccak256(arg):
     """Compute the keccak256 hash of the given arguments."""

@@ -1,0 +1,12 @@
+services:
+  web3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: web3
+    volumes:
+      - ./:/app
+    stdin_open: true
+    tty: true
+version:
+  '3.8'
