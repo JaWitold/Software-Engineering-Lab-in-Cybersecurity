@@ -1,0 +1,1 @@
+from .schnorr_signature import SchnorrSignature
