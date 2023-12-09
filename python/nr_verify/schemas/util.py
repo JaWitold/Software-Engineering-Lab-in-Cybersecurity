@@ -64,7 +64,7 @@ def randsn():
     """
     return randint(1, curve_order - 1)
 
-def addmodn(x, y):
+def addmodn(__x, __y):
     """
     Compute the result of `(x + y) % curve_order`.
 
@@ -75,9 +75,9 @@ def addmodn(x, y):
     Returns:
         int: The result of `(x + y) % curve_order`.
     """
-    return (x + y) % curve_order
+    return (__x + __y) % curve_order
 
-def mulmodn(x, y):
+def mulmodn(__x, __y):
     """
     Compute the result of `(x * y) % curve_order`.
 
@@ -88,23 +88,11 @@ def mulmodn(x, y):
     Returns:
         int: The result of `(x * y) % curve_order`.
     """
-    return (x * y) % curve_order
+    return (__x * __y) % curve_order
 
 
-if __name__ == "__main__":
-    # Define the uint256 values
-    X_0 = 0x1234  # Example uint256 value
-    X_1 = 0x6789  # Example uint256 value
-    MESSAGE = 0x1222  # Example uint256 value
-
-    # Perform the encoding
-    ENCODED_PACKED_BYTES = encode_packed(X_0, X_1, MESSAGE)
-    print(ENCODED_PACKED_BYTES.hex())
-
-    # Compute the hash
-    hash_bytes = keccak256(ENCODED_PACKED_BYTES)
-
-    # Convert hash to integer and apply modulus
-    GEN_ORDER = 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
-    h = int.from_bytes(hash_bytes, byteorder="big") % GEN_ORDER
-    print(h)
+def bn128_point_to_list(point):
+    """
+    Converts curve point to list of two values
+    """
+    return [point[0].n, point[1].n]

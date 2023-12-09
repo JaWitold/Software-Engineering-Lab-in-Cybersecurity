@@ -2,10 +2,9 @@
 Module: schnorr_signature
 This module provides implementation for Schnorr signature algorithm.
 """
-
 from typing import Tuple
 from py_ecc.bn128 import multiply, add, curve_order, G1
-from .util import keccak256, encode_packed, randsn, addmodn, mulmodn
+from nr_verify.schemas.util import keccak256, encode_packed, randsn, addmodn, mulmodn
 
 
 class SchnorrSignature:
@@ -14,8 +13,8 @@ class SchnorrSignature:
 
     This class provides methods for signing and verifying Schnorr signatures.
     """
-
-    def hash(self, b: bytes) -> int:
+    @staticmethod
+    def hash(in_bytes: bytes) -> int:
         """
         This function takes a byte sequence, computes its Keccak256 hash,
         interprets the hash as an integer in big-endian byte order
@@ -28,9 +27,10 @@ class SchnorrSignature:
             int: The resulting integer after converting the Keccak256 hash
                  and applying the modulo operation.
         """
-        return int.from_bytes(keccak256(b), byteorder="big") % curve_order
+        return int.from_bytes(keccak256(in_bytes), byteorder="big") % curve_order
 
-    def sign(self, privkey: int, message: int):
+    @staticmethod
+    def sign(privkey: int, message: int):
         """
         This function computes schnorr signature with given private key over the message
 
@@ -44,18 +44,20 @@ class SchnorrSignature:
         pubkey = multiply(G1, privkey)
 
         # X = G * x
-        x = randsn()
-        x_ = multiply(G1, x)
+        priv_ephemeral_val = randsn()
+        public_ephemeral_val = multiply(G1, priv_ephemeral_val)
 
         # h = Hash(X, message)
-        h = self.hash(encode_packed(x_[0].n, x_[1].n, message))
+        hash_val = SchnorrSignature.hash(encode_packed(
+            public_ephemeral_val[0].n, public_ephemeral_val[1].n, message))
 
         # s = x + a * h
-        s = addmodn(x, mulmodn(privkey, h))
+        small_s = addmodn(priv_ephemeral_val, mulmodn(privkey, hash_val))
 
-        return pubkey, (x_, s)
+        return pubkey, (public_ephemeral_val, small_s)
 
-    def verify(self, pubkey: int, message: int, signature: Tuple[int, int]) -> bool:
+    @staticmethod
+    def verify(pubkey: int, message: int, signature: Tuple[int, int]) -> bool:
         """
         This function verifies schnorr signature with given public key over the message
 
@@ -67,39 +69,20 @@ class SchnorrSignature:
         Returns:
             bool: True if signature is verified, else False
         """
-        x_, s = signature
+        public_ephemeral_val, small_s = signature
 
         # h = Hash(X, message)
-        h = self.hash(encode_packed(x_[0].n, x_[1].n, message))
+        hash_val = SchnorrSignature.hash(encode_packed(
+            public_ephemeral_val[0].n, public_ephemeral_val[1].n, message))
 
         # sG = s * G
-        sg_ = multiply(G1, s)
+        geneator_to_small_s = multiply(G1, small_s)
 
         # hA = h * A
-        ha_ = multiply(pubkey, h)
+        hash_times_pubkey = multiply(pubkey, hash_val)
 
         # X + hA
-        xha_ = add(x_, ha_)
+        result = add(public_ephemeral_val, hash_times_pubkey)
 
         # Verify that s * G = X + h * A
-        return sg_ == xha_
-
-
-if __name__ == "__main__":
-
-    ss = SchnorrSignature()
-
-    PRIVKEY_1 = 19977808579986318922850133509558564821349392755821541651519240729619349670944
-    PRIVKEY_2 = 34783947491279721981739821
-
-    MESSAGE = 123
-
-    pubkey_1, signature_1 = ss.sign(PRIVKEY_1, 123)
-    pubkey_2, signature_2 = ss.sign(PRIVKEY_2, 123)
-
-    assert ss.verify(pubkey_1, MESSAGE, signature_1)
-    assert ss.verify(pubkey_2, MESSAGE, signature_2)
-    assert not ss.verify(pubkey_1, 124, signature_1)
-    assert not ss.verify(pubkey_2, 124, signature_2)
-    assert not ss.verify(pubkey_1, MESSAGE, signature_2)
-    assert not ss.verify(pubkey_2, MESSAGE, signature_1)
+        return geneator_to_small_s == result

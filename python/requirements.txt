@@ -1,3 +1,4 @@
 py_ecc
 pycryptodome
 eth-abi
+web3
