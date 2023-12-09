@@ -2,9 +2,8 @@
 Module: schnorr_signature
 This module provides implementation for Schnorr signature algorithm.
 """
-
 from typing import Tuple
-from py_ecc.bn128 import multiply, add, curve_order, G1
+from py_ecc.bn128 import multiply, add, curve_order, G1, field_modulus
 from .util import keccak256, encode_packed, randsn, addmodn, mulmodn
 
 
@@ -86,6 +85,14 @@ class SchnorrSignature:
 
 
 if __name__ == "__main__":
+
+    FIELD_ORDER = int(
+        "0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47", 16)
+    GEN_ORDER = int(
+        "0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001", 16)
+
+    print(f"{FIELD_ORDER=}\n{GEN_ORDER=}")
+    print(f"{curve_order=}\n{field_modulus=}")
 
     ss = SchnorrSignature()
 
