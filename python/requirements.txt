@@ -2,3 +2,5 @@ py_ecc
 pycryptodome
 eth-abi
 web3
+py-solc-x
+python-dotenv
