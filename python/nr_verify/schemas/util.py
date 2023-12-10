@@ -22,9 +22,11 @@ Example:
 """
 
 from random import randint
+
+import py_ecc
 from py_ecc.bn128 import curve_order
 from Crypto.Hash import keccak
-from eth_abi import encode
+from eth_abi import packed
 
 def keccak256(arg):
     """Compute the keccak256 hash of the given arguments."""
@@ -47,13 +49,12 @@ def encode_packed(*args):
             # Handle integers
             types.append('uint256')
             values.append(arg)
-        elif isinstance(arg, str):
+        elif isinstance(arg, py_ecc.fields.bn128_FQ):
             # Handle strings (you must decide on the encoding)
-            types.append('bytes32')
-            values.append(arg.encode('utf-8'))
+            types.append('uint256')
+            values.append(int(str(arg)))
             # Add other data types as needed
-
-    return encode(types, values)
+    return packed.encode_packed(types, values)
 
 def randsn():
     """

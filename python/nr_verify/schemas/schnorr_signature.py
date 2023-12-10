@@ -3,8 +3,10 @@ Module: schnorr_signature
 This module provides implementation for Schnorr signature algorithm.
 """
 from typing import Tuple
+
 from py_ecc.bn128 import multiply, add, curve_order, G1
-from nr_verify.schemas.util import keccak256, encode_packed, randsn, addmodn, mulmodn
+
+from .util import keccak256, encode_packed, randsn, addmodn, mulmodn
 
 
 class SchnorrSignature:
@@ -13,6 +15,7 @@ class SchnorrSignature:
 
     This class provides methods for signing and verifying Schnorr signatures.
     """
+
     @staticmethod
     def hash(in_bytes: bytes) -> int:
         """
@@ -48,8 +51,9 @@ class SchnorrSignature:
         public_ephemeral_val = multiply(G1, priv_ephemeral_val)
 
         # h = Hash(X, message)
-        hash_val = SchnorrSignature.hash(encode_packed(
-            public_ephemeral_val[0].n, public_ephemeral_val[1].n, message))
+        hash_val = int.from_bytes(
+            keccak256(encode_packed(public_ephemeral_val[0].n, public_ephemeral_val[1].n, message)),
+            'big') % curve_order
 
         # s = x + a * h
         small_s = addmodn(priv_ephemeral_val, mulmodn(privkey, hash_val))
@@ -57,13 +61,13 @@ class SchnorrSignature:
         return pubkey, (public_ephemeral_val, small_s)
 
     @staticmethod
-    def verify(pubkey: int, message: int, signature: Tuple[int, int]) -> bool:
+    def verify(pubkey: Tuple, message: int, signature: Tuple[int, int]) -> bool:
         """
         This function verifies schnorr signature with given public key over the message
 
         Args:
             pubkey (int): Public key.
-            message (int): Message correspodning to signature.
+            message (int): Message corresponding to signature.
             signature (tuple): Signature to be verified.
 
         Returns:
@@ -72,9 +76,14 @@ class SchnorrSignature:
         public_ephemeral_val, small_s = signature
 
         # h = Hash(X, message)
-        hash_val = SchnorrSignature.hash(encode_packed(
-            public_ephemeral_val[0].n, public_ephemeral_val[1].n, message))
-
+        hash_val = int.from_bytes(
+            keccak256(
+                encode_packed(
+                    public_ephemeral_val[0].n,
+                    public_ephemeral_val[1].n,
+                    message)
+            ), 'big'
+        ) % curve_order
         # sG = s * G
         geneator_to_small_s = multiply(G1, small_s)
 
@@ -86,3 +95,21 @@ class SchnorrSignature:
 
         # Verify that s * G = X + h * A
         return geneator_to_small_s == result
+
+
+if __name__ == "__main__":
+    ss = SchnorrSignature()
+
+    PRIVKEY_1 = 19977808579986318922850133509558564821349392755821541651519240729619349670944
+    PRIVKEY_2 = 34783947491279721981739821
+
+    MESSAGE = 123
+
+    pubkey_1, signature_1 = ss.sign(PRIVKEY_1, 123)
+    pubkey_2, signature_2 = ss.sign(PRIVKEY_2, 123)
+    assert ss.verify(pubkey_1, MESSAGE, signature_1)
+    assert ss.verify(pubkey_2, MESSAGE, signature_2)
+    assert not ss.verify(pubkey_1, 124, signature_1)
+    assert not ss.verify(pubkey_2, 124, signature_2)
+    assert not ss.verify(pubkey_1, MESSAGE, signature_2)
+    assert not ss.verify(pubkey_2, MESSAGE, signature_1)
