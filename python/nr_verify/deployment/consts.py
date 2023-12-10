@@ -1,0 +1,27 @@
+"""
+File contating consts to connect to blockchain and deploy contract
+"""
+import os
+GANACHE_URL = "HTTP://127.0.0.1:7545"
+CHAIN_ID = 1337
+SOL_VER = "0.8.18"
+
+SOL_REGULAR_SCHNORR_CONTRACT_NAME = "SchnorrSignature"
+SOL_REGULAR_SCHNORR_CONTRACT_FILENAME = SOL_REGULAR_SCHNORR_CONTRACT_NAME + ".sol"
+
+SOL_ELIPTIC_CURVE_NAME = "EllipticCurve"
+SOL_ELIPTIC_CURVE_FILENAME = SOL_ELIPTIC_CURVE_NAME + ".sol"
+
+__ABI_JSON_FILENAME = "abi.json"
+__CURR_FILE = os.path.abspath(__file__)
+__DEPLOYMENT_DIR = os.path.dirname(__CURR_FILE)
+__NR_VERIFY_DIR = os.path.dirname(__DEPLOYMENT_DIR)
+__PYTHON_DIR = os.path.dirname(__NR_VERIFY_DIR)
+__ROOT_DIR = os.path.dirname(__PYTHON_DIR)
+__CONTRACTS_FOLDER = os.path.join(__ROOT_DIR, "contracts")
+
+SOL_REGULAR_SCHNORR_CONTRACT_FILE_PATH = os.path.join(
+    __CONTRACTS_FOLDER, SOL_REGULAR_SCHNORR_CONTRACT_FILENAME)
+SOL_ELIPTIC_CURVE_FILE_PATH = os.path.join(
+    __CONTRACTS_FOLDER, SOL_ELIPTIC_CURVE_FILENAME)
+ABI_FILENAME = os.path.join(__DEPLOYMENT_DIR, __ABI_JSON_FILENAME)
