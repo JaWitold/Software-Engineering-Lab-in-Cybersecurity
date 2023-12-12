@@ -7,8 +7,8 @@ import random
 
 from py_ecc.bn128 import multiply, add, G1, neg, eq
 
-from .schnorr_signature import SchnorrSignature
-from .util import keccak256, encode_packed, randsn, addmodn, curve_order
+from schnorr_signature import SchnorrSignature
+from util import keccak256, encode_packed, randsn, addmodn, curve_order
 
 
 class NodeRingSchnorr:
@@ -70,11 +70,20 @@ class NodeRingSchnorr:
                     at a random position.
         """
         # Step 1: Generate an ephemeral key pair
-        new_private_key = randsn()
+        new_private_key = int.from_bytes(
+            keccak256(
+                encode_packed(
+                    message,
+                    private_key,
+                    *[y[0] for y in ext_public_keys],
+                    *[y[1] for y in ext_public_keys]
+                )
+            ), byteorder="big"
+        ) % self.GEN_ORDER
         new_public_key = multiply(G1, new_private_key)
 
         # Step 2: Generate a list of unique random values
-        random_values = self._generate_random_values(len(ext_public_keys) + 1)
+        random_values = self._generate_random_values(len(ext_public_keys))
 
         # Step 3: Calculate partial signatures and hashes for each external public key
         ephemeral_randomness, sigmas, product = self._calculate_partial_signatures(
