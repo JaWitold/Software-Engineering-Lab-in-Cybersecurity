@@ -6,7 +6,7 @@ from typing import Tuple
 
 from py_ecc.bn128 import multiply, add, curve_order, G1
 
-from .util import keccak256, encode_packed, randsn, addmodn, mulmodn
+from util import keccak256, encode_packed, randsn, addmodn, mulmodn
 
 
 class SchnorrSignature:
