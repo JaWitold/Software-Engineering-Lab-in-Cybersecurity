@@ -7,8 +7,8 @@ import random
 
 from py_ecc.bn128 import multiply, add, G1, neg, eq
 
-from .schnorr_signature import SchnorrSignature
-from .util import keccak256, encode_packed, randsn, addmodn, curve_order
+from schnorr_signature import SchnorrSignature
+from util import keccak256, encode_packed, randsn, addmodn, curve_order
 
 
 class NodeRingSchnorr:
