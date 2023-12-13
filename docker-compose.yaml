@@ -1,0 +1,29 @@
+services:
+  python:
+    build:
+      context: .
+      target: python
+    container_name: python
+    hostname: python
+    volumes:
+      - ./:/app
+    stdin_open: true
+    tty: true
+    depends_on:
+      - ganache
+    networks:
+      - web3_backend
+  ganache:
+    container_name: ganache
+    build:
+      context: .
+      target: ganache
+    ports:
+      - 8545:8545
+    networks:
+      - web3_backend
+version:
+  '3.8'
+networks:
+  web3_backend:
+    driver: "bridge"
