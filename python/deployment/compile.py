@@ -8,25 +8,50 @@ GREEN = "\033[92m"
 BOLD = "\033[1m"
 
 def write_abi(abi: str, contract_name: str, CONTRACTS_BUILD_PATH: str) -> None:
+    """
+    Writes the ABI to a file
+
+    Args:
+        abi (str): ABI of the contract
+        contract_name (str): Name of the contract
+        CONTRACTS_BUILD_PATH (str): Path to the build folder
+
+    Returns:
+        None
+    """
+
     abi_path = os.path.join(CONTRACTS_BUILD_PATH, f"abi_{contract_name}.json")
     with open(abi_path, "w") as file:
         json.dump(abi, file)
 
 
 def write_bytecode(bytecode: str, contract_name: str, CONTRACTS_BUILD_PATH: str) -> None:
+    """
+    Writes the bytecode to a file
+
+    Args:
+        bytecode (str): Bytecode of the contract
+        contract_name (str): Name of the contract
+        CONTRACTS_BUILD_PATH (str): Path to the build folder
+
+    Returns:
+        None
+    """
     bytecode_path = os.path.join(CONTRACTS_BUILD_PATH, f"bytecode_{contract_name}")
     with open(bytecode_path, "w") as file:
         file.write(bytecode)
+
 
 def compile_contract(contract_name: str, SOLC_VERSION: str, CONTRACTS_PATH: str, CONTRACTS_BUILD_PATH: str, SOL_ELLIPTIC_CURVE_FILENAME: str) -> tuple[str, str]:
     """
     Compiles a contract
 
     Args:
-        contract_name (str): Name of the contract to compile
-        SOLC_VERSION (str): Version of the solc compiler
+        contract_name (str): Name of the contract
+        SOLC_VERSION (str): Version of the Solidity compiler
         CONTRACTS_PATH (str): Path to the contracts folder
         CONTRACTS_BUILD_PATH (str): Path to the build folder
+        SOL_ELLIPTIC_CURVE_FILENAME (str): Name of the Solidity file containing the elliptic curve
 
     Returns:
         tuple[str, str]: ABI and bytecode of the contract

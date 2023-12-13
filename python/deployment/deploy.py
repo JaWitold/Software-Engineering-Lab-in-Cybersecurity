@@ -7,14 +7,15 @@ BOLD = "\033[1m"
 
 def deploy_contract(abi: str, bytecode: str, PROVIDER: str, PRIVATE_KEY: str, ADDRESS: str, CHAIN_ID: str = "1337"):
     """
-    Deploys a contract to the blockchain
+    Deploys a contract
 
     Args:
         abi (str): ABI of the contract
         bytecode (str): Bytecode of the contract
-        PROVIDER (str): URL of the blockchain node
-        PRIVATE_KEY (str): Private key of the account that will deploy the contract
-        ADDRESS (str): Address of the account that will deploy the contract
+        PROVIDER (str): Provider of the blockchain node
+        PRIVATE_KEY (str): Private key of the account
+        ADDRESS (str): Address of the account
+        CHAIN_ID (str, optional): Chain ID of the blockchain. Defaults to "1337".
     """
 
     print("\n"+BOLD+"+"*20 + " DEPLOYMENT " + "+"*20+RESET+"\n")

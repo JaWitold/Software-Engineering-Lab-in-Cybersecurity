@@ -1,5 +1,5 @@
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 SOL_ELLIPTIC_CURVE_FILENAME = "EllipticCurve.sol"
 
@@ -48,6 +48,7 @@ def main():
     print("[.env] CONTRACTS_BUILD_PATH: " + CONTRACTS_BUILD_PATH)
     print("[.env] CHAIN_ID: " + CHAIN_ID)
     print("[.env] SOLC_VERSION: " + SOLC_VERSION)
+    print("[.env] FILES_TO_COMPILE: " + FILES_TO_COMPILE)
 
 if __name__ == "__main__":
     main()

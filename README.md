@@ -3,7 +3,7 @@
 Before compiling and deploying your contract you need to create a `.env` file. 
 See `.env.example` for this purpose.
 
-Then, you can start the docker containers to crerate your development environment.
+Then, you can start the docker containers to create your development environment.
 It includes a **ganache** instance and a **python+solidity** container to run the code, compile contracts etc.
 
 ```bash
@@ -44,7 +44,7 @@ ganache  | (9) 0x54b57210f982a0e2c4c8db35c29d2db4cecd49aba33b544cab9e60ece5a1509
 
 Choose one account and it's private key and replace it in the `.env` file.
 
-> Note: It is not necessary to use Ganache, every other provider could be used, you juste need to change the `.env` variable **PROVIDER**.
+> Note: It is not necessary to use Ganache, every other provider could be used, you juste need to change the `.env` variable **PROVIDER_URL**.
 
 Open a shell in the python container :
 ```bash
