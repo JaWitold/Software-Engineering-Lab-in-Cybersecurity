@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./SchnorrSignature.sol";
 
-contract NrVerify is SchnorrSignature {
+contract SchnorrSignatureNodeRing is SchnorrSignature {
     // Utility function to compare two G1Point instances
     function isEqual(G1Point memory a, G1Point memory b) internal pure returns (bool) {
         return a.X == b.X && a.Y == b.Y;
