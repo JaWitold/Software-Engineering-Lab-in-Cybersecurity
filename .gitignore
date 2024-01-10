@@ -2,6 +2,3 @@ contracts/**/*.js
 contracts/bin/
 .idea/
 __pycache__/
-python/__pycache__/
-.env
-build/**/*
