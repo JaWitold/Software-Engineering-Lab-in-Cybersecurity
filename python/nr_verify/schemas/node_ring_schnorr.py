@@ -35,7 +35,8 @@ class NodeRingSchnorr:
             ephemeral_randomness.append(multiply(G1, random_values[i]))
             _, sigma = SchnorrSignature.sign(
                 new_private_key,
-                int(ephemeral_randomness[i][0]) + int(ephemeral_randomness[i][1])
+                int(ephemeral_randomness[i][0]) +
+                int(ephemeral_randomness[i][1])
             )
             sigmas.append(sigma)
             hash_input = encode_packed(
@@ -46,7 +47,8 @@ class NodeRingSchnorr:
                 sigma[0][1],
                 sigma[1]
             )
-            hash_ = int.from_bytes(keccak256(hash_input), byteorder="big") % curve_order
+            hash_ = int.from_bytes(keccak256(hash_input),
+                                   byteorder="big") % curve_order
             product = add(product, multiply(neg(ext_public_key), hash_))
         return ephemeral_randomness, sigmas, product
 
@@ -57,16 +59,20 @@ class NodeRingSchnorr:
 
         :param private_key: The private key of the signer.
         :param message: The message to be signed.
-        :param ext_public_keys: A list of external public keys, each represented as a pair of integers
-            (elliptic curve points).
+        :param ext_public_keys: A list of external public keys,
+          each represented as a pair of integers (elliptic curve points).
         :return: A tuple consisting of:
                  - new_public_key: The newly generated public key.
-                 - ephemeral_randomness: A list of ephemeral randomness values, one for each external public key, plus
-                    one additional value.
-                 - sigmas: A list of sigmas (partial signatures), one for each value in ephemeral_randomness.
-                 - master_sum: The sum of the master random value and the product of the signer's private key and the
+                 - ephemeral_randomness: A list of ephemeral randomness values,
+                    one for each external public key,
+                    plus one additional value.
+                 - sigmas: A list of sigmas (partial signatures),
+                    one for each value in ephemeral_randomness.
+                 - master_sum: The sum of the master random value and
+                    the product of the signer's private key and the
                     master hash, incremented by the sum of all random values.
-                 - ext_public_keys: An updated list of external public keys with the signer's public key inserted
+                 - ext_public_keys: An updated list of external public keys with
+                    the signer's public key inserted
                     at a random position.
         """
         # Step 1: Generate an ephemeral key pair
@@ -98,7 +104,8 @@ class NodeRingSchnorr:
             master_random_value = randsn()
             master_randomness = add(multiply(G1, master_random_value), product)
 
-            if master_randomness is not None and all(master_randomness != r for r in ephemeral_randomness):
+            if master_randomness is not None and \
+                all(master_randomness != r for r in ephemeral_randomness):
                 break
 
         # Step 5: Generate the master signature
@@ -118,7 +125,8 @@ class NodeRingSchnorr:
                 )
             ), byteorder="big"
         ) % self.GEN_ORDER
-        master_sum = (master_random_value + private_key * master_hash) % curve_order
+        master_sum = (master_random_value + private_key *
+                      master_hash) % curve_order
 
         # Step 6: Add all random values to the master sum
         for random_value in random_values:
@@ -144,13 +152,16 @@ class NodeRingSchnorr:
         :param message: The message to be verified.
         :param signature:  A tuple consisting of:
                  - new_public_key: The newly generated public key.
-                 - ephemeral_randomness: A list of ephemeral randomness values, one for each external public key,
+                 - ephemeral_randomness: A list of ephemeral randomness values,
+                    one for each external public key,
                     plus one additional value.
-                 - sigmas: A list of sigmas (partial signatures), one for each value in ephemeral_randomness.
-                 - master_sum: The sum of the master random value and the product of the signer's private key and the
+                 - sigmas: A list of sigmas (partial signatures),
+                    one for each value in ephemeral_randomness.
+                 - master_sum: The sum of the master random value and
+                    the product of the signer's private key and the
                     master hash, incremented by the sum of all random values.
-                 - ext_public_keys: An updated list of external public keys with the signer's public key inserted
-                    at a random position.
+                 - ext_public_keys: An updated list of external public keys with
+                    the signer's public key inserted at a random position.
         :return: bool
         """
         new_public_key, ephemeral_randomness, sigmas, master_sum, ext_public_keys = signature
@@ -159,7 +170,8 @@ class NodeRingSchnorr:
         prod = True
         for i, ext_public_key in enumerate(ext_public_keys):
             prod = prod and SchnorrSignature.verify(new_public_key,
-                                                    int(ephemeral_randomness[i][0]) + int(ephemeral_randomness[i][1]),
+                                                    int(ephemeral_randomness[i][0]) + int(
+                                                        ephemeral_randomness[i][1]),
                                                     sigmas[i]
                                                     )
             hash_ = int.from_bytes(keccak256(encode_packed(
@@ -170,5 +182,6 @@ class NodeRingSchnorr:
                 sigmas[i][0][1],
                 sigmas[i][1]
             )), byteorder="big") % self.GEN_ORDER
-            sum_ = add(sum_, add(ephemeral_randomness[i], multiply(ext_public_key, hash_)))
+            sum_ = add(
+                sum_, add(ephemeral_randomness[i], multiply(ext_public_key, hash_)))
         return prod and eq(multiply(G1, master_sum), sum_)

@@ -9,7 +9,7 @@ contract SchnorrSignature is EllipticCurve {
         return uint256(keccak256(b)) % GEN_ORDER;
     }
 
-    function verify(uint256[2] memory pubkey, uint256 message, uint256[2] memory X, uint256 s) public view returns (bool)
+    function schnorr_verify(uint256[2] memory pubkey, uint256 message, uint256[2] memory X, uint256 s) public view returns (bool)
     {
         G1Point memory pubKeyPoint = G1Point(pubkey[0], pubkey[1]);
         G1Point memory randomPoint = G1Point(X[0], X[1]);
