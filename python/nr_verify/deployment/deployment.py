@@ -23,16 +23,19 @@ def deploy_contract():
     """
     Function to deploy contract
     """
+    contracts_to_deploy_filenames = ["SignaturesStorage.sol"]
+    contracts_to_deploy_names = [os.path.basename(contract_filename).split('.')[0]
+                                 for contract_filename in contracts_to_deploy_filenames]
+
     # Load environment variables
     load_dotenv()
     # Get the list of contract paths and Solidity version from the .env file
     contract_dir = os.getenv('CONTRACT_DIR')
-    contract_filenames = os.getenv('CONTRACT_NAMES').split(',')
-    contract_names = [os.path.basename(contract_filename).split('.')[0]
-                      for contract_filename in contract_filenames]
+    sources_filenames = os.getenv('CONTRACT_NAMES').split(',')
     solidity_version = os.getenv('SOLIDITY_VERSION')
-
+    solidity_version = os.getenv('SOLIDITY_VERSION')
     current_file_dir = os.path.dirname(os.path.abspath(__file__))
+
     os.chdir(current_file_dir)
     if os.path.exists(contract_dir):
         os.chdir(os.getenv('CONTRACT_DIR'))
@@ -46,10 +49,9 @@ def deploy_contract():
     compiled_sol = compile_standard({
         "language": "Solidity",
         "sources": {
-            contract_name: {
-                "content": read_file_content(contract_filename)
-            } for contract_name, contract_filename in
-            zip(contract_names, contract_filenames)
+            source_filename: {
+                "content": read_file_content(source_filename)
+            } for source_filename in sources_filenames
         },
         "settings": {
             "outputSelection": {
@@ -60,17 +62,18 @@ def deploy_contract():
         }
     }, solc_version=solidity_version)
 
-    compiled_contracts = {
-        contract_name: {
-            'bytecode': compiled_sol['contracts'][contract_name][contract_name]
-            ['evm']['bytecode']['object'],
-            'abi': compiled_sol['contracts'][contract_name][contract_name]['abi']
-        }
-        for contract_name in contract_names
+    compiled_contracts_to_deploy = {
+        contracts_to_deploy_name: {
+            'bytecode': compiled_sol['contracts'][contract_to_deploy_filename]
+            [contracts_to_deploy_name]['evm']['bytecode']['object'],
+            'abi': compiled_sol['contracts'][contract_to_deploy_filename]
+            [contracts_to_deploy_name]['abi']
+        } for contract_to_deploy_filename, contracts_to_deploy_name
+        in zip(contracts_to_deploy_filenames, contracts_to_deploy_names)
     }
     os.chdir(os.path.dirname(__file__))
     with open('contracts.bin', 'wb') as file:
-        file.write(pickle.dumps(compiled_contracts))
+        file.write(pickle.dumps(compiled_contracts_to_deploy))
 
     # Connect to an Ethereum node
     web3 = Web3(Web3.HTTPProvider(
@@ -83,13 +86,11 @@ def deploy_contract():
         os.remove("deployment.txt")
 
     # Deploy each compiled contract
-    schnorr_sig_nr_addr = None
-
-    for contract_name in compiled_contracts.keys():
+    for contract_name in compiled_contracts_to_deploy.keys():
 
         contract = web3.eth.contract(
-            abi=compiled_contracts[contract_name]['abi'],
-            bytecode=compiled_contracts[contract_name]['bytecode']
+            abi=compiled_contracts_to_deploy[contract_name]['abi'],
+            bytecode=compiled_contracts_to_deploy[contract_name]['bytecode']
         )
 
         # Load account from private key
@@ -98,11 +99,8 @@ def deploy_contract():
 
         # Set up transaction
         nonce = web3.eth.get_transaction_count(account.address)
-        constructor_arg = None
-        if contract_name == "SignaturesStorage" and schnorr_sig_nr_addr is not None:
-            constructor_arg = schnorr_sig_nr_addr
 
-        transaction = contract.constructor(constructor_arg).build_transaction({
+        transaction = contract.constructor().build_transaction({
             'from': account.address,
             'nonce': nonce,
             'chainId': int(os.getenv('CHAIN_ID')),
@@ -118,9 +116,6 @@ def deploy_contract():
 
         # Wait for the transaction to be mined
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
-
-        if contract_name == "SchnorrSignatureNodeRing":
-            schnorr_sig_nr_addr = tx_receipt.contractAddress
 
         # Output the address of the deployed contract
         print(
