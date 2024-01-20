@@ -12,7 +12,7 @@ contract SchnorrSignatureNodeRing is SchnorrSignature {
         return a.X == b.X && a.Y == b.Y;
     }
 
-    function verify(
+    function schnorrNrVerify(
         uint256 message,
         uint256[2] memory newPublicKey, // G1
         uint256[2][] memory ephemeralRandomness, // list of G1
@@ -54,7 +54,7 @@ contract SchnorrSignatureNodeRing is SchnorrSignature {
             // Perform the prod calculation
             prod =
                 prod &&
-                schnorr_verify(
+                schnorrVerify(
                     newPublicKey,
                     ephemeralRandomness[i][0] + ephemeralRandomness[i][1],
                     xsigmas[i],

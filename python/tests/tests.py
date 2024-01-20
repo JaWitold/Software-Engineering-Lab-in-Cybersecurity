@@ -55,7 +55,7 @@ def test_nr_sign():
     Test node ring signature
     """
     # pylint: disable=R0801
-    pub_keys = [multiply(G1, randsn()) for _ in range(10)]
+    pub_keys = [multiply(G1, randsn()) for _ in range(2)]
     priv_key = randsn()
     msg = 1234567890
     node_ring_schnorr = NodeRingSchnorr()

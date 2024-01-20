@@ -47,7 +47,7 @@ def perform_signature_verification(contract):
 
     public_ephemeral_val, small_s = signature
 
-    return contract.functions.verify(
+    return contract.functions.schnorrVerify(
         bn128_point_to_list(pubkey),
         message,
         bn128_point_to_list(public_ephemeral_val),

@@ -3,13 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./SchnorrSignatureNodeRing.sol";
 
-contract SignaturesStorage {
-    SchnorrSignatureNodeRing schnorrSigNr;
-
-    constructor(address externalContractAddress) {
-        schnorrSigNr = SchnorrSignatureNodeRing(externalContractAddress);
-    }
-
+contract SignaturesStorage is SchnorrSignatureNodeRing {
     struct Signature {
         uint256 message;
         uint256[2] newPublicKey;
@@ -39,7 +33,7 @@ contract SignaturesStorage {
         uint256[2][] memory _publicKeys
     ) public {
         require(
-            schnorrSigNr.verify(
+            schnorrNrVerify(
                 _message,
                 _newPublicKey,
                 _ephemeralRandomness,
