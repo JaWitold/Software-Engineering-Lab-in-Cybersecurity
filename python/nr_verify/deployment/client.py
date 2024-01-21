@@ -3,7 +3,10 @@ Client to connect to blockchain
 """
 
 import os
+import sys
+
 import pickle
+from pprint import pprint
 
 from dotenv import load_dotenv
 from web3 import Web3
@@ -97,7 +100,7 @@ def store_signature(w3_instance, contract):
     """
     Test contract for storing signatures
     """
-    private_key = input('PRIVATE_KEY: ')
+    private_key = os.getenv('PRIVATE_KEY')
     account = w3_instance.eth.account.from_key(private_key)
     nonce = w3_instance.eth.get_transaction_count(account.address)
 
@@ -141,9 +144,95 @@ def run_client():
         f"http://{os.getenv('IP')}:{os.getenv('PORT')}"))
     compiled_contracts = load_compiled_contracts()
 
-    contract_address = input("Provide contract address: ")
-    contract_abi = compiled_contracts['SignaturesStorage']['abi']
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    contract_abi = compiled_contracts['HierVerify']['abi']
 
     storage_contract = get_contract_instance(
         w3_instance, contract_address, contract_abi)
     store_signature(w3_instance, storage_contract)
+
+def get_client():
+    """
+    Connect to Ganache blockchain and call transaction function.
+    """
+    load_dotenv()
+    w3_instance = Web3(Web3.HTTPProvider(f"http://{os.getenv('IP')}:{os.getenv('PORT')}"))
+    compiled_contracts = load_compiled_contracts()
+
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    contract_abi = compiled_contracts['HierVerify']['abi']
+
+    storage_contract = get_contract_instance(w3_instance, contract_address, contract_abi)
+    arguments = [int(input("PKX: ")), int(input("PKY: "))]
+
+    signatures = storage_contract.functions.getSignaturesForPublicKey(
+        arguments
+    ).call()
+
+    print(f"count: {len(signatures)}")
+    pprint(f"messages for given public key: {[m[0] for m in signatures]}")
+
+
+def get_new_client():
+    """
+    Connect to Ganache blockchain and call transaction function.
+    """
+    load_dotenv()
+    w3_instance = Web3(Web3.HTTPProvider(f"http://{os.getenv('IP')}:{os.getenv('PORT')}"))
+    compiled_contracts = load_compiled_contracts()
+
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    contract_abi = compiled_contracts['HierVerify']['abi']
+
+    storage_contract = get_contract_instance(w3_instance, contract_address, contract_abi)
+    arguments = [int(input("PKX: ")), int(input("PKY: "))]
+
+    signatures = storage_contract.functions.getSignaturesByNewPublicKey(
+        arguments
+    ).call()
+
+    print(f"count: {len(signatures)}")
+    pprint(f"messages for given new_public key: {signatures}")
+
+def run_hier_ver():
+    """
+    Connect to Ganache blockchain and call hierVerify function.
+    """
+    load_dotenv()
+    w3_instance = Web3(Web3.HTTPProvider(f"http://{os.getenv('IP')}:{os.getenv('PORT')}"))
+    compiled_contracts = load_compiled_contracts()
+
+    contract_address = os.getenv("CONTRACT_ADDRESS")
+    contract_abi = compiled_contracts['HierVerify']['abi']
+
+    storage_contract = get_contract_instance(w3_instance, contract_address, contract_abi)
+    arguments = [int(input("PKX: ")), int(input("PKY: "))]
+
+    signatures = storage_contract.functions.getSignaturesByNewPublicKey(
+        arguments
+    ).call()
+
+    if len(signatures) == 0:
+        print("No signatures")
+        sys.exit(0)
+
+    print(f"count: {len(signatures)}")
+    messages = [m[0] for m in signatures]
+    pprint(f"messages for given new_public key: {messages}")
+
+    while True:
+        message = int(input("Message: "))
+        if message in messages:
+            break
+    signature = list(filter(lambda m: m[0] == message, signatures))
+    print(signatures)
+    print(signature)
+
+    arguments = signature.pop()
+
+    print(arguments)
+    result = storage_contract.functions.hierVerify(
+        *arguments
+    ).call()
+
+    print(f"result: {result}")

@@ -21,6 +21,7 @@ contract SignaturesStorage is SchnorrSignatureNodeRing {
     //     public signaturesByPublicKey;
     // or the following?
     mapping(bytes => uint256[]) public signaturesByPublicKey;
+    mapping(bytes => uint256[]) public signaturesByNewPublicKey;
 
     // Function to store a new signature
     function storeSignature(
@@ -63,7 +64,7 @@ contract SignaturesStorage is SchnorrSignatureNodeRing {
                 abi.encodePacked(_publicKeys[i][0], _publicKeys[i][1])
             ].push(index);
         }
-        signaturesByPublicKey[
+        signaturesByNewPublicKey[
             abi.encodePacked(_newPublicKey[0], _newPublicKey[1])
         ].push(index);
     }

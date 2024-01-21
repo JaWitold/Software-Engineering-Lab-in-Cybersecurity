@@ -88,6 +88,10 @@ class NodeRingSchnorr:
         ) % self.GEN_ORDER
         new_public_key = multiply(G1, new_private_key)
 
+        # For debugging purposes
+        print(f"new_private_key: {new_private_key}")
+        print(f"new_public_key: {new_public_key}")
+
         # Step 2: Generate a list of unique random values
         random_values = self._generate_random_values(len(ext_public_keys))
 
