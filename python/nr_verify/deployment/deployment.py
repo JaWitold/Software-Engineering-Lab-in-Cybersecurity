@@ -23,7 +23,7 @@ def deploy_contract():
     """
     Function to deploy contract
     """
-    contracts_to_deploy_filenames = ["SignaturesStorage.sol"]
+    contracts_to_deploy_filenames = ["HierVerify.sol"]
     contracts_to_deploy_names = [os.path.basename(contract_filename).split('.')[0]
                                  for contract_filename in contracts_to_deploy_filenames]
 
@@ -32,7 +32,6 @@ def deploy_contract():
     # Get the list of contract paths and Solidity version from the .env file
     contract_dir = os.getenv('CONTRACT_DIR')
     sources_filenames = os.getenv('CONTRACT_NAMES').split(',')
-    solidity_version = os.getenv('SOLIDITY_VERSION')
     solidity_version = os.getenv('SOLIDITY_VERSION')
     current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
