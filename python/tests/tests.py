@@ -69,10 +69,10 @@ def test_pki():
     """
     pki = PKI()
     pki.clear_database()
-    
+
     fill_pki_database_with_keys(pki, 10)
     assert pki.get_number_of_keys() == 10
-    
+
     pki.clear_database()
 
     pki.generate_key_for_user(5, "test5")
