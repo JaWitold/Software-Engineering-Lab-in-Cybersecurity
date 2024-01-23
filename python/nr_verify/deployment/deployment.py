@@ -1,3 +1,7 @@
+"""
+File contaninig solidity contracts deployment part
+"""
+import sys
 import os
 import pickle
 
@@ -7,21 +11,36 @@ from web3 import Web3
 
 
 def read_file_content(file_name):
-    """ Read and return the content of a file. """
+    """
+    Read and return the content of a file.
+    """
     with open(file_name, 'r', encoding='utf-8') as file:
         return file.read()
 
 
-if __name__ == "__main__":
+def deploy_contract():
+    # pylint: disable=R0914
+    """
+    Function to deploy contract
+    """
+    contracts_to_deploy_filenames = ["HierVerify.sol"]
+    contracts_to_deploy_names = [os.path.basename(contract_filename).split('.')[0]
+                                 for contract_filename in contracts_to_deploy_filenames]
+
     # Load environment variables
     load_dotenv()
     # Get the list of contract paths and Solidity version from the .env file
     contract_dir = os.getenv('CONTRACT_DIR')
-    contract_names = os.getenv('CONTRACT_NAMES').split(',')
+    sources_filenames = os.getenv('CONTRACT_NAMES').split(',')
     solidity_version = os.getenv('SOLIDITY_VERSION')
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
+    os.chdir(current_file_dir)
     if os.path.exists(contract_dir):
         os.chdir(os.getenv('CONTRACT_DIR'))
+    else:
+        print("Error reading dir")
+        sys.exit(1)
 
     # Install and set the Solidity compiler version
     install_solc(solidity_version)
@@ -29,9 +48,9 @@ if __name__ == "__main__":
     compiled_sol = compile_standard({
         "language": "Solidity",
         "sources": {
-            os.path.basename(contract_name).split('.')[0]: {
-                "content": read_file_content(contract_name)
-            } for contract_name in contract_names
+            source_filename: {
+                "content": read_file_content(source_filename)
+            } for source_filename in sources_filenames
         },
         "settings": {
             "outputSelection": {
@@ -42,20 +61,22 @@ if __name__ == "__main__":
         }
     }, solc_version=solidity_version)
 
-    compiled_contracts = {
-        contract_name: {
-            'bytecode': compiled_sol['contracts'][contract_name][contract_name]['evm']['bytecode']['object'],
-            'abi': compiled_sol['contracts'][contract_name][contract_name]['abi']
-        }
-        for contract_filename in contract_names
-        for contract_name in [os.path.basename(contract_filename).split('.')[0]]
+    compiled_contracts_to_deploy = {
+        contracts_to_deploy_name: {
+            'bytecode': compiled_sol['contracts'][contract_to_deploy_filename]
+            [contracts_to_deploy_name]['evm']['bytecode']['object'],
+            'abi': compiled_sol['contracts'][contract_to_deploy_filename]
+            [contracts_to_deploy_name]['abi']
+        } for contract_to_deploy_filename, contracts_to_deploy_name
+        in zip(contracts_to_deploy_filenames, contracts_to_deploy_names)
     }
     os.chdir(os.path.dirname(__file__))
-    with open('contracts.bin', 'wb') as f:
-        f.write(pickle.dumps(compiled_contracts))
+    with open('contracts.bin', 'wb') as file:
+        file.write(pickle.dumps(compiled_contracts_to_deploy))
 
     # Connect to an Ethereum node
-    web3 = Web3(Web3.HTTPProvider(f"HTTP://{os.getenv('IP')}:{os.getenv('PORT')}"))
+    web3 = Web3(Web3.HTTPProvider(
+        f"HTTP://{os.getenv('IP')}:{os.getenv('PORT')}"))
     # Check connection
     assert web3.is_connected(), "Web3 is not connected to Ethereum node."
 
@@ -64,10 +85,11 @@ if __name__ == "__main__":
         os.remove("deployment.txt")
 
     # Deploy each compiled contract
-    for contract_name in compiled_contracts.keys():
+    for contract_name in compiled_contracts_to_deploy.keys():
+
         contract = web3.eth.contract(
-            abi=compiled_contracts[contract_name]['abi'],
-            bytecode=compiled_contracts[contract_name]['bytecode']
+            abi=compiled_contracts_to_deploy[contract_name]['abi'],
+            bytecode=compiled_contracts_to_deploy[contract_name]['bytecode']
         )
 
         # Load account from private key
@@ -76,6 +98,7 @@ if __name__ == "__main__":
 
         # Set up transaction
         nonce = web3.eth.get_transaction_count(account.address)
+
         transaction = contract.constructor().build_transaction({
             'from': account.address,
             'nonce': nonce,
@@ -84,7 +107,8 @@ if __name__ == "__main__":
         })
 
         # Sign the transaction
-        signed_txn = web3.eth.account.sign_transaction(transaction, private_key)
+        signed_txn = web3.eth.account.sign_transaction(
+            transaction, private_key)
 
         # Send the transaction
         tx_hash = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
@@ -93,7 +117,8 @@ if __name__ == "__main__":
         tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash)
 
         # Output the address of the deployed contract
-        print(f"Contract {contract_name} deployed at address: {tx_receipt.contractAddress}")
+        print(
+            f"Contract {contract_name} deployed at address: {tx_receipt.contractAddress}")
 
-        with open("deployment.txt", "a", encoding="UTF-8") as f:
-            f.write(f"{contract_name}: {tx_receipt.contractAddress}\n")
+        with open("deployment.txt", "a", encoding="UTF-8") as file:
+            file.write(f"{contract_name}: {tx_receipt.contractAddress}\n")

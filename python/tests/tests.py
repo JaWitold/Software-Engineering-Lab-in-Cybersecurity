@@ -2,8 +2,11 @@
 Module with tests
 """
 
-from nr_verify.schemas.util import encode_packed, keccak256
+from nr_verify.schemas.util import encode_packed, keccak256, randsn
 from nr_verify.schemas.schnorr_signature import SchnorrSignature
+from nr_verify.schemas.node_ring_schnorr import NodeRingSchnorr
+from py_ecc.bn128 import multiply, G1
+
 
 def test_utils():
     """
@@ -45,3 +48,16 @@ def test_schnorr_sign():
     assert not SchnorrSignature.verify(pubkey_2, 124, signature_2)
     assert not SchnorrSignature.verify(pubkey_1, message, signature_2)
     assert not SchnorrSignature.verify(pubkey_2, message, signature_1)
+
+
+def test_nr_sign():
+    """
+    Test node ring signature
+    """
+    # pylint: disable=R0801
+    pub_keys = [multiply(G1, randsn()) for _ in range(2)]
+    priv_key = randsn()
+    msg = 1234567890
+    node_ring_schnorr = NodeRingSchnorr()
+    signature = node_ring_schnorr.nr_sign(priv_key, msg, pub_keys)
+    assert node_ring_schnorr.nr_verify(msg, signature)
