@@ -5,6 +5,7 @@ Module with tests
 from nr_verify.schemas.util import encode_packed, keccak256, randsn
 from nr_verify.schemas.schnorr_signature import SchnorrSignature
 from nr_verify.schemas.node_ring_schnorr import NodeRingSchnorr
+from nr_verify.pki.fill_pki import fill_pki_database_with_keys, PKI
 from py_ecc.bn128 import multiply, G1
 
 
@@ -61,3 +62,32 @@ def test_nr_sign():
     node_ring_schnorr = NodeRingSchnorr()
     signature = node_ring_schnorr.nr_sign(priv_key, msg, pub_keys)
     assert node_ring_schnorr.nr_verify(msg, signature)
+
+def test_pki():
+    """
+    Test PKI database
+    """
+    pki = PKI()
+    pki.clear_database()
+    
+    fill_pki_database_with_keys(pki, 10)
+    assert pki.get_number_of_keys() == 10
+    
+    pki.clear_database()
+
+    pki.generate_key_for_user(5, "test5")
+    assert pki.get_number_of_keys() == 1
+
+    pki.generate_key_for_user(3, "test3")
+    assert pki.get_number_of_keys() == 2
+
+    sk = 123
+    pk = multiply(G1, sk)
+
+    pki.insert_key(pk, sk, 32, "test32")
+    assert pki.get_number_of_keys() == 3
+
+    sk = pki.generate_key_for_user(111, "test111")
+    pk = pki.get_public_key_by_owner_ids([111])[0]
+
+    assert multiply(G1, sk) == pk
