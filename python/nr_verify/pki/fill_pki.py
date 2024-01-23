@@ -6,7 +6,7 @@ This module provides function to fill pki with sample data.
 import random
 import string
 
-from PKI import PKI
+from .public_key_infrastructure import PKI
 
 def generate_random_string(length: int = 8) -> str:
     """
