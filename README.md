@@ -59,5 +59,3 @@ python3 python/deployment/index.py
 The contracts to be compiled must be provided in the `.env` variable **FILES_TO_COMPILE**, separated by `,`.
 For example :
 - `FILES_TO_COMPILE="NrVerify,SchnorrSignature"`
-
-

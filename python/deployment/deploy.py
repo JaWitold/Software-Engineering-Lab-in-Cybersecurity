@@ -18,7 +18,7 @@ def deploy_contract(abi: str, bytecode: str, PROVIDER: str, PRIVATE_KEY: str, AD
         CHAIN_ID (str, optional): Chain ID of the blockchain. Defaults to "1337".
     """
 
-    print("\n"+BOLD+"+"*20 + " DEPLOYMENT " + "+"*20+RESET+"\n")
+    print(f"\n{BOLD}{"+"*20} DEPLOYMENT {"+"*20}{RESET}\n")
     # Connect to blockchain node
     w3 = web3.Web3(web3.Web3.HTTPProvider(PROVIDER))
     if(w3.is_connected() == False):

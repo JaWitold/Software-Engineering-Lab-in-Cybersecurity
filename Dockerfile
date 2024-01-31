@@ -45,5 +45,6 @@ COPY . .
 # web3, solcx python wrappers
 RUN pip install -r python/requirements.txt
 RUN mkdir -p /root/.solcx/ && cp /usr/local/bin/solc /root/.solcx/solc-v0.8.22
+RUN mkdir -p /app/build
 
 ENTRYPOINT ["python3"]

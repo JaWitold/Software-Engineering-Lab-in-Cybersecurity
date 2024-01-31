@@ -57,7 +57,7 @@ def compile_contract(contract_name: str, SOLC_VERSION: str, CONTRACTS_PATH: str,
         tuple[str, str]: ABI and bytecode of the contract
     """
 
-    print("\n"+BOLD+"+"*20 + " COMPILATION " + "+"*20+RESET+"\n")
+    print(f"\n{BOLD}{"+"*20} COMPILATION {"+"*20}{RESET}\n")
     file_name = contract_name + ".sol"
     file_path = os.path.join(CONTRACTS_PATH, file_name)
     try:
