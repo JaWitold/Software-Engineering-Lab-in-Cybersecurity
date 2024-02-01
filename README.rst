@@ -1,64 +1,134 @@
-.. These are examples of badges you might want to add to your README:
-   please update the URLs accordingly
+====================================
+Hierarchical Ring Signatures Revisited – Unconditionally and Perfectly Anonymous Schnorr Version - Student's implementation
+====================================
 
-    .. image:: https://api.cirrus-ci.com/github/<USER>/Software-Engineering-Lab-in-Cybersecurity.svg?branch=main
-        :alt: Built Status
-        :target: https://cirrus-ci.com/github/<USER>/Software-Engineering-Lab-in-Cybersecurity
-    .. image:: https://readthedocs.org/projects/Software-Engineering-Lab-in-Cybersecurity/badge/?version=latest
-        :alt: ReadTheDocs
-        :target: https://Software-Engineering-Lab-in-Cybersecurity.readthedocs.io/en/stable/
-    .. image:: https://img.shields.io/coveralls/github/<USER>/Software-Engineering-Lab-in-Cybersecurity/main.svg
-        :alt: Coveralls
-        :target: https://coveralls.io/r/<USER>/Software-Engineering-Lab-in-Cybersecurity
-    .. image:: https://img.shields.io/pypi/v/Software-Engineering-Lab-in-Cybersecurity.svg
-        :alt: PyPI-Server
-        :target: https://pypi.org/project/Software-Engineering-Lab-in-Cybersecurity/
-    .. image:: https://img.shields.io/conda/vn/conda-forge/Software-Engineering-Lab-in-Cybersecurity.svg
-        :alt: Conda-Forge
-        :target: https://anaconda.org/conda-forge/Software-Engineering-Lab-in-Cybersecurity
-    .. image:: https://pepy.tech/badge/Software-Engineering-Lab-in-Cybersecurity/month
-        :alt: Monthly Downloads
-        :target: https://pepy.tech/project/Software-Engineering-Lab-in-Cybersecurity
-    .. image:: https://img.shields.io/twitter/url/http/shields.io.svg?style=social&label=Twitter
-        :alt: Twitter
-        :target: https://twitter.com/Software-Engineering-Lab-in-Cybersecurity
+Introduction
+------------
 
-.. image:: https://img.shields.io/badge/-PyScaffold-005CA0?logo=pyscaffold
-    :alt: Project generated with PyScaffold
-    :target: https://pyscaffold.org/
+This project aims to (briefly describe the purpose of your project, what problems it solves, and how). It incorporates Python for backend logic and Solidity for smart contract development, facilitating seamless interaction with the Ethereum blockchain.
 
-|
+The structure and methodologies are inspired by the concepts discussed in the paper "Hierarchical Ring Signatures Revisited – Unconditionally and Perfectly Anonymous Schnorr Version" by Łukasz Krzywiecki, Małgorzata Sulkowska, and Filip Zagórski, which can be accessed [here](https://link.springer.com/chapter/10.1007/978-3-319-24126-5_19). Special acknowledgment to Prof. Krzywiecki for the foundational theories and frameworks utilized in this project. More about Prof. Krzywiecki's work can be found on his [web page](https://cs.pwr.edu.pl/krzywiecki/index.html).
 
-=========================================
-Software-Engineering-Lab-in-Cybersecurity
-=========================================
+Getting Started
+---------------
 
+**Prerequisites**
 
-    Students Project for SecurityEngineeringLabInCybersecurity classes
+- Python 3.10+
+- pip (Python package manager)
+- Docker
 
+**Installation**
 
-A longer description of your project goes here...
+1. Clone the repository:
 
+   .. code-block:: bash
 
-.. _pyscaffold-notes:
+       git clone https://github.com/JaWitold/Software-Engineering-Lab-in-Cybersecurity.git
 
-Making Changes & Contributing
-=============================
+2. Navigate to the project directory:
 
-This project uses `pre-commit`_, please make sure to install it before making any
-changes::
+   .. code-block:: bash
 
-    pip install pre-commit
-    cd Software-Engineering-Lab-in-Cybersecurity
-    pre-commit install
+       cd Software-Engineering-Lab-in-Cybersecurity
 
-It is a good idea to update the hooks to the latest version::
+3. Setup virtual environment
 
-    pre-commit autoupdate
+   .. code-block:: bash
 
-Don't forget to tell your contributors to also install and use pre-commit.
+      virtualenv venv
 
-.. _pre-commit: https://pre-commit.com/
+4. Activate virtual environment
+
+   .. code-block:: bash
+
+      source .venv/bin/activate
+
+5. Install the required Python dependencies from setup.cfg:
+
+   .. code-block:: bash
+
+       pip install -e .
+
+Running the Python Code
+-----------------------
+
+To run the Python code, navigate to the src directory and execute:
+
+.. code-block:: bash
+
+    python main.py
+
+Replace `main.py` with the actual entry point of your project.
+
+Running Tests
+-------------
+
+This project uses `pytest` for testing. To run the tests, execute the following command:
+
+.. code-block:: bash
+
+    pytest
+
+Or, if you're using `tox`, simply run:
+
+.. code-block:: bash
+
+    tox
+
+Deploying the Solidity Contract
+-------------------------------
+
+.. todo:: TODO
+
+**Local Ganache Setup**
+
+1. Ensure Docker is installed and running on your machine.
+
+2. Pull the Ganache Docker image:
+
+   .. code-block:: bash
+
+       docker pull trufflesuite/ganache-cli
+
+3. Run Ganache:
+
+   .. code-block:: bash
+
+       docker run -d -p 8545:8545 trufflesuite/ganache-cli:latest
+
+**Deploying Contract**
+
+After setting up Ganache, deploy the Solidity contract by executing:
+
+.. code-block:: bash
+
+    truffle migrate --reset
+
+(Ensure you have Truffle installed and your `truffle-config.js` is configured to connect to your Ganache instance.)
+
+Project Structure
+-----------------
+
+- `src/`: Contains the Python code.
+- `contracts/`: Solidity contracts.
+- `tests/`: Python test cases.
+- `docs/`: Project documentation.
+
+References
+----------
+
+- "Hierarchical Ring Signatures Revisited – Unconditionally and Perfectly Anonymous Schnorr Version", accessible at https://link.springer.com/chapter/10.1007/978-3-319-24126-5_19
+- Prof. Krzywiecki's web page: https://cs.pwr.edu.pl/krzywiecki/index.html
+
+Contributing
+------------
+
+.. include:: ../CONTRIBUTING.rst
+
+License
+-------
+.. include:: ../LICENSE.txt
 
 Note
 ====
