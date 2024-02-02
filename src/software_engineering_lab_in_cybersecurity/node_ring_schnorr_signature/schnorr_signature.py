@@ -4,8 +4,9 @@ It provides functionality to sign messages and verify signatures according to th
 This implementation is intended for educational and research purposes in software engineering and cybersecurity fields,
 especially focusing on blockchain technology and cryptographic protocols.
 
-.. note:: This module is designed for educational and research purposes and may not be suitable for production
-        environments without further security assessments and optimizations.
+.. note::
+    This module is designed for educational and research purposes and may not be suitable for production
+    environments without further security assessments and optimizations.
 """
 
 from py_ecc.bn128 import G1, add, multiply
@@ -35,12 +36,15 @@ class SchnorrSignature:
 
         This method uses an ephemeral key pair for the signing process, computes a hash
         value using the public part of the ephemeral key and the message, and calculates
-        the signature combining the ephemeral private key, the signer's private key, and the hash.
+        the signature by combining the ephemeral private key, the signer's private key, and the hash.
 
-        :param message: The message to be signed, represented as an integer.
-        :param private_key: The private key of the signer, represented as an integer.
+        :param message: The message to be signed.
+        :type message: int
+        :param private_key: The private key of the signer.
+        :type private_key: int
         :return: A tuple containing the elliptic curve point (public part of the ephemeral key)
-                 and the signature value, both of which are necessary for the verification process.
+                 and the signature value.
+        :rtype: SchnorrSignatureType
         """
         ephemeral_value = generate_random_scalar()
         public_ephemeral_value = multiply(G1, ephemeral_value)
@@ -56,15 +60,18 @@ class SchnorrSignature:
         """
         Verifies a Schnorr signature for a given message and public key.
 
-        This method checks if the signature corresponds to the message and the public key by recalculating
-        the hash with the message and the public part of the ephemeral key, and verifying the elliptic
-        curve equation associated with the Schnorr signature.
+        This method determines if the provided signature corresponds to the message and the public key
+        by recalculating the hash with the message and the public part of the ephemeral key, and then
+        verifying the elliptic curve equation associated with the Schnorr signature.
 
-        :param message: The message corresponding to the signature, represented as an integer.
-        :param signature: The signature to be verified, represented as a tuple of an elliptic curve point
-                          and an integer.
-        :param public_key: The public key associated with the signature, represented as an elliptic curve point.
+        :param message: The message corresponding to the signature.
+        :type message: int
+        :param signature: The signature to be verified, represented as an elliptic curve point and an integer.
+        :type signature: SchnorrSignatureType
+        :param public_key: The public key associated with the signature.
+        :type public_key: Point2D[Field]
         :return: True if the signature is valid for the given message and public key, False otherwise.
+        :rtype: bool
         """
         r, s = signature
         h = sol_hash(*convert_bn128_point_to_coordinates(r), message)
