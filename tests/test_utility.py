@@ -9,8 +9,13 @@ from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.utili
     sol_hash,
 )
 
+__author__ = "Witold Karaś"
+__copyright__ = "Witold Karaś"
+__license__ = "MIT"
+__email__ = "<witekkaras00@gmail.com>"
 
-class TestCryptoFunctions(unittest.TestCase):
+
+class TestUtility(unittest.TestCase):
     """
     Unit tests for cryptographic utility functions including keccak256 hashing,
     Solidity-style hash computation with sol_hash, and abi.encodePacked emulation
