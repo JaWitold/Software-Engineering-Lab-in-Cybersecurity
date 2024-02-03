@@ -1,5 +1,6 @@
 import unittest
 
+from conftest import get_random_int
 from Crypto.Hash import keccak
 from py_ecc.fields import bn128_FQ
 
@@ -43,11 +44,9 @@ class TestUtility(unittest.TestCase):
         for a sequence of integer arguments, emulating Solidity's keccak256 hash
         on tightly packed arguments.
         """
-        args = (1, 2, 3)
+        args = [get_random_int() for _ in range(10)]
         packed_data = encode_packed(*args)
-        expected_output = int.from_bytes(
-            keccak.new(digest_bits=256).update(packed_data).digest(), "big"
-        )
+        expected_output = int.from_bytes(keccak.new(digest_bits=256).update(packed_data).digest(), "big")
         self.assertEqual(
             sol_hash(*args),
             expected_output,
@@ -60,17 +59,16 @@ class TestUtility(unittest.TestCase):
         of integers and bn128_FQ objects into a byte string, mimicking Solidity's
         abi.encodePacked functionality.
         """
-        args = (1, bn128_FQ(2), 3)
-        expected_packed_data = (
-            (b"\x00" * 31 + b"\x01")
-            + (b"\x00" * 31 + b"\x02")
-            + (b"\x00" * 31 + b"\x03")
-        )
-        self.assertEqual(
-            encode_packed(*args),
-            expected_packed_data,
-            "Encoded packed data does not match expected output",
-        )
+        for _ in range(1000):
+            args = (get_random_int(), bn128_FQ(get_random_int()))
+            expected_packed_data = b"".join(
+                [(arg if isinstance(arg, int) else arg.n).to_bytes(32, "big") for arg in args]
+            )
+            self.assertEqual(
+                encode_packed(*args),
+                expected_packed_data,
+                "Encoded packed data does not match expected output",
+            )
 
 
 if __name__ == "__main__":

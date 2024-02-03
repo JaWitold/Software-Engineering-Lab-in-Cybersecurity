@@ -17,7 +17,7 @@ def generate_random_scalar() -> int:
     return randint(1, curve_order - 1)
 
 
-def convert_bn128_point_to_coordinates(point: Point2D[Field]) -> List[int]:
+def convert_point_2d_to_list(point: Point2D[Field]) -> List[int]:
     """
     Convert a BN128 curve point into a list of its x and y coordinates.
 
@@ -28,3 +28,14 @@ def convert_bn128_point_to_coordinates(point: Point2D[Field]) -> List[int]:
     :rtype: List[int]
     """
     return [int(point[0]), int(point[1])]
+
+
+def sum_coordinates(point: Point2D[Field]) -> int:
+    """
+
+    :param point:
+    :type point: Point2D[Field]
+
+    :return: int
+    """
+    return sum(convert_point_2d_to_list(point))
