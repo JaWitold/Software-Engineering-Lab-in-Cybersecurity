@@ -9,11 +9,11 @@ especially focusing on blockchain technology and cryptographic protocols.
     environments without further security assessments and optimizations.
 """
 
-from py_ecc.bn128 import G1, add, multiply
+from py_ecc.bn128 import G1, add, curve_order, multiply
 from py_ecc.typing import Field, Point2D
 
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.elliptic_curve import (
-    convert_bn128_point_to_coordinates,
+    convert_point_2d_to_list,
     generate_random_scalar,
 )
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.utility import (
@@ -29,8 +29,12 @@ class SchnorrSignature:
     of messages using elliptic curve cryptography.
     """
 
+    def __init__(self, r: Point2D[Field], s: int):
+        self.r = r
+        self.s = s
+
     @staticmethod
-    def sign(message: int, private_key: int) -> SchnorrSignatureType:
+    def sign(message: int, private_key: int):
         """
         Generates a Schnorr signature for a given message using the sender's private key.
 
@@ -44,19 +48,14 @@ class SchnorrSignature:
         :type private_key: int
         :return: A tuple containing the elliptic curve point (public part of the ephemeral key)
                  and the signature value.
-        :rtype: SchnorrSignatureType
+        :rtype: SchnorrSignature
         """
         ephemeral_value = generate_random_scalar()
         public_ephemeral_value = multiply(G1, ephemeral_value)
-        h = sol_hash(
-            *convert_bn128_point_to_coordinates(public_ephemeral_value), message
-        )
-        return public_ephemeral_value, ephemeral_value + (private_key * h)
+        h = sol_hash(*convert_point_2d_to_list(public_ephemeral_value), message)
+        return SchnorrSignature(public_ephemeral_value, (ephemeral_value + (private_key * h)) % curve_order)
 
-    @staticmethod
-    def verify(
-        message: int, signature: SchnorrSignatureType, public_key: Point2D[Field]
-    ) -> bool:
+    def verify(self, message: int, public_key: Point2D[Field]) -> bool:
         """
         Verifies a Schnorr signature for a given message and public key.
 
@@ -66,13 +65,10 @@ class SchnorrSignature:
 
         :param message: The message corresponding to the signature.
         :type message: int
-        :param signature: The signature to be verified, represented as an elliptic curve point and an integer.
-        :type signature: SchnorrSignatureType
         :param public_key: The public key associated with the signature.
         :type public_key: Point2D[Field]
         :return: True if the signature is valid for the given message and public key, False otherwise.
         :rtype: bool
         """
-        r, s = signature
-        h = sol_hash(*convert_bn128_point_to_coordinates(r), message)
-        return multiply(G1, s) == add(r, multiply(public_key, h))
+        h = sol_hash(*convert_point_2d_to_list(self.r), message)
+        return multiply(G1, self.s) == add(self.r, multiply(public_key, h))

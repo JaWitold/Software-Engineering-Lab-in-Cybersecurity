@@ -1,6 +1,6 @@
-import random
 import unittest
 
+from conftest import get_random_int
 from py_ecc.bn128 import G1, multiply
 
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.schnorr_signature import (
@@ -27,13 +27,12 @@ class TestSchnorrSignature(unittest.TestCase):
         Test that a Schnorr signature correctly verifies with matching message and keys.
         """
         for _ in range(10):
-            message = random.randint(1, 0xFFFFFF)
-            sk = random.randint(1, 0xFFFFFF)
+            message = get_random_int()
+            sk = get_random_int()
             pk = multiply(G1, sk)
+            signature = SchnorrSignature.sign(message, sk)
             self.assertTrue(
-                SchnorrSignature.verify(
-                    message, SchnorrSignature.sign(message, sk), pk
-                ),
+                signature.verify(message, pk),
                 "Signature should verify with matching message and keys.",
             )
 
@@ -42,14 +41,13 @@ class TestSchnorrSignature(unittest.TestCase):
         Test that a Schnorr signature fails to verify for a forged message.
         """
         for _ in range(10):
-            message = random.randint(1, 0xFFFFFF)
-            forged_message = random.randint(1, 0xFFFFFF)
-            sk = random.randint(1, 0xFFFFFF)
+            message = get_random_int()
+            forged_message = get_random_int()
+            sk = get_random_int()
             pk = multiply(G1, sk)
+            signature = SchnorrSignature.sign(message, sk)
             self.assertFalse(
-                SchnorrSignature.verify(
-                    forged_message, SchnorrSignature.sign(message, sk), pk
-                ),
+                signature.verify(forged_message, pk),
                 "Signature verification should fail for forged message.",
             )
 
@@ -58,14 +56,13 @@ class TestSchnorrSignature(unittest.TestCase):
         Test that a Schnorr signature fails to verify with a public key that does not match the signer's key.
         """
         for _ in range(10):
-            message = random.randint(1, 0xFFFFFF)
-            sk = random.randint(1, 0xFFFFFF)
-            sk_2 = random.randint(1, 0xFFFFFF)
+            message = get_random_int()
+            sk = get_random_int()
+            sk_2 = get_random_int()
             pk = multiply(G1, sk_2)
+            signature = SchnorrSignature.sign(message, sk)
             self.assertFalse(
-                SchnorrSignature.verify(
-                    message, SchnorrSignature.sign(message, sk), pk
-                ),
+                signature.verify(message, pk),
                 "Signature verification should fail with non-matching public key.",
             )
 

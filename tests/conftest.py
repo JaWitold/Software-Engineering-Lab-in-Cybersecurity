@@ -7,4 +7,13 @@
     - https://docs.pytest.org/en/stable/writing_plugins.html
 """
 
+import random
+
+
 # import pytest
+def get_random_int():
+    """
+    Return a random integer between 1 and 2^256
+    :return:
+    """
+    return random.randint(1, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
