@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  ganache:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ganache
+    container_name: ganache
+    volumes:
+      - ./accounts/:/home/accounts
+    ports:
+      - '8545:8545'
