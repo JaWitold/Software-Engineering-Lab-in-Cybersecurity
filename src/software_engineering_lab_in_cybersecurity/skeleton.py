@@ -20,11 +20,14 @@ References:
     - https://pip.pypa.io/en/stable/reference/pip_install
 """
 
-import argparse
 import logging
 import sys
 
 from software_engineering_lab_in_cybersecurity import __version__
+from software_engineering_lab_in_cybersecurity.common_utils import (
+    parse_args,
+    setup_logging,
+)
 
 __author__ = "Witold Karaś"
 __copyright__ = "Witold Karaś"
@@ -62,52 +65,6 @@ def fib(n):
 # executable/script.
 
 
-def parse_args(args):
-    """Parse command line parameters
-
-    Args:
-      args (List[str]): command line parameters as list of strings
-          (for example  ``["--help"]``).
-
-    Returns:
-      :obj:`argparse.Namespace`: command line parameters namespace
-    """
-    parser = argparse.ArgumentParser(description="Just a Fibonacci demonstration")
-    parser.add_argument(
-        "--version",
-        action="version",
-        version=f"Software-Engineering-Lab-in-Cybersecurity {__version__}",
-    )
-    parser.add_argument(dest="n", help="n-th Fibonacci number", type=int, metavar="INT")
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        dest="loglevel",
-        help="set loglevel to INFO",
-        action="store_const",
-        const=logging.INFO,
-    )
-    parser.add_argument(
-        "-vv",
-        "--very-verbose",
-        dest="loglevel",
-        help="set loglevel to DEBUG",
-        action="store_const",
-        const=logging.DEBUG,
-    )
-    return parser.parse_args(args)
-
-
-def setup_logging(loglevel):
-    """Setup basic logging
-
-    Args:
-      loglevel (int): minimum loglevel for emitting messages
-    """
-    logformat = "[%(asctime)s] %(levelname)s:%(name)s:%(message)s"
-    logging.basicConfig(level=loglevel, stream=sys.stdout, format=logformat, datefmt="%Y-%m-%d %H:%M:%S")
-
-
 def main(args):
     """Wrapper allowing :func:`fib` to be called with string arguments in a CLI fashion
 
@@ -118,8 +75,13 @@ def main(args):
       args (List[str]): command line parameters as list of strings
           (for example  ``["--verbose", "42"]``).
     """
-    args = parse_args(args)
+    config = {
+        "version": f"Software-Engineering-Lab-in-Cybersecurity {__version__}",
+        "custom_args": {"n": {"help": "n-th Fibonacci number", "type": int, "metavar": "INT"}},
+    }
+    args = parse_args("Just a Fibonacci demonstration", args, config)
     setup_logging(args.loglevel)
+
     _logger.debug("Starting crazy calculations...")
     print(f"The {args.n}-th Fibonacci number is {fib(args.n)}")
     _logger.info("Script ends here")
