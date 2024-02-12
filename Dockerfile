@@ -32,5 +32,6 @@ RUN mkdir -p /home/accounts
 WORKDIR /home
 EXPOSE 8545
 
-ENTRYPOINT ganache --wallet.accountKeysPath /home/accounts/accounts.json \
+ENTRYPOINT ganache -h 0.0.0.0 \
+                   --wallet.accountKeysPath /home/accounts/accounts.json \
                    --wallet.mnemonic "major arrive swarm best hungry lake amateur team float exotic sell fresh"

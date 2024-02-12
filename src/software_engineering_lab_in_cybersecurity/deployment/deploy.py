@@ -1,33 +1,214 @@
 """
-Deployment logic for smart contracts.
+File containing Solidity contracts deployment part.
 """
 
+import json
 import logging
+import os
+import re
+import sys
+from typing import List, Tuple, Type, Union
+
+from hexbytes import HexBytes
+from solcx import compile_standard, install_solc
+from web3 import HTTPProvider, Web3
+from web3.contract import Contract
+from web3.types import TxReceipt
 
 _logger = logging.getLogger(__name__)
 
 
-def deploy_contract(
-    account_address: str, private_key: str, contract_name: str, ip: str, port: str, chain_id: str
-) -> None:
+class ContractDeployer:
     """
-    Deploy a contract to a specified network using the given private key for authentication.
+    A class responsible for deploying Solidity contracts to an Ethereum blockchain network.
 
-    :param account_address: The blockchain address of the deploying account.
-    :type account_address: str
-    :param private_key: The private key associated with the deploying account.
-    :type private_key: str
-    :param contract_name: The name of the contract to deploy.
-    :type contract_name: str
-    :param ip: The IP address of the blockchain node.
-    :type ip: str
-    :param port: The port number of the blockchain node.
-    :type port: str
-    :param chain_id: The unique identifier for the blockchain network.
-    :type chain_id: str
+    This class handles the entire process of deploying a contract, including reading the contract source code,
+    compiling it using the specified Solidity version, preparing and sending the transaction, and finally,
+    saving the compiled contract's information and deployment address.
     """
-    # Use lazy % formatting for logging
-    _logger.info("Deploying %s to %s:%s, %s", contract_name, ip, port, chain_id)
-    _logger.info("%s has been successfully deployed to %s:%s.", contract_name, account_address, private_key)
-    print("Deploying %s to %s:%s, %s", contract_name, ip, port, chain_id)
-    print(("%s has been successfully deployed to %s:%s.", contract_name, account_address, private_key))
+
+    solidity_version = "0.8.18"
+
+    def __init__(self, account_address: str, private_key: str, ip: str, port: str, chain_id: str) -> None:
+        """
+        Deploy a contract to a specified network using the given private key for authentication.
+
+        :param account_address: The blockchain address of the deploying account.
+        :type account_address: str
+        :param private_key: The private key associated with the deploying account.
+        :type private_key: str
+        :param ip: The IP address of the blockchain node.
+        :type ip: str
+        :param port: The port number of the blockchain node.
+        :type port: str
+        :param chain_id: The unique identifier for the blockchain network.
+        :type chain_id: str
+        """
+        self.account_address = account_address
+        self.private_key = private_key
+        self.ip = ip
+        self.port = port
+        self.chain_id = chain_id
+
+        self.web3 = Web3(HTTPProvider(f"HTTP://{self.ip}:{self.port}"))
+        assert self.web3.is_connected(), "Failed to connect to Ethereum node."
+
+        self.account = self.web3.eth.account.from_key(self.private_key)
+        assert self.account is not None, "Failed to create account from provided private key."
+
+    def deploy_contract(self, contract_name: str) -> None:
+        """
+        Deploys the specified Solidity contract to the blockchain.
+
+        :param contract_name: The name of the contract to deploy.
+        :type contract_name: str
+        """
+        solidity_code = self._read_contract(contract_name)
+        compiled_contract = self.compile_contract(contract_name, solidity_code)
+        transaction_hash = self.prepare_transaction(compiled_contract)
+        receipt = self.send_transaction(transaction_hash)
+        self.save_compiled_contract(contract_name, receipt, compiled_contract)
+
+        _logger.info("Deployed contract")
+
+    @staticmethod
+    def _find_contract_name(code: str) -> Union[str, None]:
+        """
+        Finds the contract name in the Solidity source code.
+
+        :param code: The source code of the Solidity contract.
+        :type code: str
+        :return: The name of the contract.
+        :rtype: str
+        """
+
+        match = re.search(r"is\s+(\w+)\s*{", code)
+        return match.group(1) if match else None
+
+    @staticmethod
+    def _read_contract(contract_name: str, contracts: List[Tuple[str, str, str]] = None) -> List[Tuple[str, str, str]]:
+        """
+        Reads the Solidity contract file containing the specified contract name from the 'contracts' directory.
+
+        :param contracts:
+        :param contract_name: The name of the Solidity contract to read.
+        :type contract_name: str
+        :return: The content of the Solidity contract file.
+        :rtype: str
+        :raises FileNotFoundError: If no contract matching the specified name is found.
+        """
+        if contracts is None:
+            contracts = []
+
+        contracts_dir = os.path.join(os.getcwd(), "contracts")
+        for filename in os.listdir(contracts_dir):
+            if filename.endswith(".sol"):
+                with open(os.path.join(contracts_dir, filename), "r", encoding="utf-8") as file:
+                    content = file.read()
+                    if f"contract {contract_name}" in content and contract_name not in [
+                        name for name, _, _ in contracts
+                    ]:
+                        contracts.insert(0, (contract_name, content, filename))
+                        parent = ContractDeployer._find_contract_name(content)
+                        if parent is not None:
+                            ContractDeployer._read_contract(parent, contracts)
+        if len(contracts) == 0:
+            _logger.error("No contract named %s was found in the 'contracts' directory.", contract_name)
+            sys.exit(1)
+        return contracts
+
+    def compile_contract(self, contract_name: str, code: List[Tuple[str, str, str]]) -> Union[Type[Contract], Contract]:
+        """
+        Compiles the specified Solidity contract along with its dependencies.
+
+        :param contract_name: The name of the main contract to compile.
+        :type contract_name: str
+        :param code: A list of tuples containing contract name, content, and filename for each contract and dependency.
+        :type code: List[Tuple[str, str, str]]
+        :return: A Web3 contract object for the compiled main contract.
+        """
+        install_solc(self.solidity_version)
+
+        compiled_sol = compile_standard(
+            {
+                "language": "Solidity",
+                "sources": {f_name: {"content": c_content} for _, c_content, f_name in code},
+                "settings": {
+                    "outputSelection": {"*": {"*": ["metadata", "evm.bytecode", "evm.bytecode.sourceMap", "abi"]}}
+                },
+            },
+            solc_version=self.solidity_version,
+            base_path=os.path.join(os.getcwd(), "contracts"),
+        )
+
+        c_name, _, f_name = list(filter(lambda x: x[0] == contract_name, code)).pop()
+        metadata = compiled_sol["contracts"][f_name][c_name]
+
+        return self.web3.eth.contract(abi=metadata["abi"], bytecode=metadata["evm"]["bytecode"]["object"])
+
+    def prepare_transaction(self, contract: Contract) -> HexBytes:
+        """
+        Prepares the transaction for deploying the contract.
+
+        :param contract: The Web3 contract object to deploy.
+        :type contract: Contract
+        :return: The hash of the sent transaction.
+        """
+        transaction = contract.constructor().build_transaction(
+            {
+                "from": self.account.address,
+                "nonce": self.web3.eth.get_transaction_count(self.account.address),
+                "chainId": int(self.chain_id),
+                "gasPrice": self.web3.eth.gas_price,
+            }
+        )
+        signature = self.web3.eth.account.sign_transaction(transaction, self.private_key)
+        return self.web3.eth.send_raw_transaction(signature.rawTransaction)
+
+    def send_transaction(self, transaction_hash: HexBytes) -> TxReceipt:
+        """
+        Waits for the transaction to be mined and returns the transaction receipt.
+
+        :param transaction_hash: The hash of the transaction to wait for.
+        :type transaction_hash: HexBytes
+        :return: The transaction receipt.
+        """
+        return self.web3.eth.wait_for_transaction_receipt(transaction_hash)
+
+    @staticmethod
+    def save_compiled_contract(contract_name: str, receipt: TxReceipt, compiled_contract: Contract) -> None:
+        """
+        Saves the compiled contract's information and deployment address to a JSON file.
+
+        :param contract_name: The name of compiled contract.
+        :type contract_name: str
+        :param receipt: The transaction receipt containing the deployment address.
+        :type receipt: TxReceipt
+        :param compiled_contract: The compiled contract instance.
+        :type compiled_contract: Contract
+        """
+        base_directory = os.path.join(os.getcwd(), "deployment")
+        deployed_contracts_file_path = os.path.join(base_directory, "deployed_contracts.json")
+        os.makedirs(base_directory, exist_ok=True)
+
+        contract_data = {
+            "name": contract_name,
+            "abi": compiled_contract.abi,
+            "bytecode": compiled_contract.bytecode.hex(),
+        }
+
+        if os.path.exists(deployed_contracts_file_path):
+            with open(deployed_contracts_file_path, "r", encoding="utf-8") as file:
+                try:
+                    data = json.load(file)
+                except json.JSONDecodeError:
+                    data = {}
+        else:
+            data = {}
+
+        data[receipt.contractAddress] = contract_data
+
+        with open(deployed_contracts_file_path, "w", encoding="utf-8") as file:
+            json.dump(data, file, indent=4, sort_keys=True)
+
+        _logger.info("Contract %s deployed and saved at %s", contract_name, receipt.contractAddress)
