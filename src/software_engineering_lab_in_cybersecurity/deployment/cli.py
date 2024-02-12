@@ -15,7 +15,7 @@ from software_engineering_lab_in_cybersecurity.common_utils import (
     parse_args,
     setup_logging,
 )
-from software_engineering_lab_in_cybersecurity.deployment.deploy import deploy_contract
+from software_engineering_lab_in_cybersecurity.deployment.deploy import ContractDeployer
 
 load_dotenv()
 
@@ -58,7 +58,7 @@ def main(args: List[str]) -> None:
                 "dest": "port",
                 "type": str,
                 "help": "Port number for deployment. Can also be set in .env as CONTRACT_PORT.",
-                "default": os.getenv("CONTRACT_PORT", "8545"),  # Example default port
+                "default": os.getenv("CONTRACT_PORT", "8545"),
             },
             "--chain-id": {
                 "dest": "chain_id",
@@ -102,7 +102,8 @@ def main(args: List[str]) -> None:
         print(f"Selected address: {account_address}")
 
     _logger.debug("Initiating deployment process...")
-    deploy_contract(account_address, private_key, args.contract_name, args.ip, args.port, args.chain_id)
+    deployer = ContractDeployer(account_address, private_key, args.ip, args.port, args.chain_id)
+    deployer.deploy_contract(args.contract_name)
     _logger.info("Deployment process completed.")
 
 

@@ -47,12 +47,12 @@ contract SchnorrSignatureNodeRing is SchnorrSignature {
 
             // Aggregate the sum of all R points and public key points weighted by the hash.
             // This is part of the verification equation for the ring signature.
-            aggregatePoint = add(aggregatePoint, add(G1Point(Rs[i][0], Rs[i][1]), mul(G1Point(publicKeys[i][0], publicKeys[i][1]), h)));
+            aggregatePoint = add(aggregatePoint, add(G1Point(Rs[i][0], Rs[i][1]), multiply(G1Point(publicKeys[i][0], publicKeys[i][1]), h)));
         }
 
         // Verify the final aggregated signature:
         // Check if multiplying the generator point by the aggregated scalar sum yields the same point as the aggregated sum of R and weighted public keys.
         // Also, ensure that all sub-signatures were verified successfully.
-        return isEqual(mul(G1, sum), aggregatePoint) && subSignatureVerified;
+        return isEqual(multiply(G1, sum), aggregatePoint) && subSignatureVerified;
     }
 }

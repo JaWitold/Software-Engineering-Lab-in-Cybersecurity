@@ -52,5 +52,7 @@ MANIFEST
 .venv*/
 .conda*/
 .python-version
+
+/deployment/deployed_contracts.json
 /accounts/accounts.json
 /.env
