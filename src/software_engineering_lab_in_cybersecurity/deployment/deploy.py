@@ -11,14 +11,15 @@ from typing import List, Tuple, Type, Union
 
 from hexbytes import HexBytes
 from solcx import compile_standard, install_solc
-from web3 import HTTPProvider, Web3
 from web3.contract import Contract
 from web3.types import TxReceipt
+
+from software_engineering_lab_in_cybersecurity.blockchain_base import BlockchainBase
 
 _logger = logging.getLogger(__name__)
 
 
-class ContractDeployer:
+class ContractDeployer(BlockchainBase):
     """
     A class responsible for deploying Solidity contracts to an Ethereum blockchain network.
 
@@ -44,14 +45,10 @@ class ContractDeployer:
         :param chain_id: The unique identifier for the blockchain network.
         :type chain_id: str
         """
+        super().__init__(ip, port, chain_id)
+
         self.account_address = account_address
         self.private_key = private_key
-        self.ip = ip
-        self.port = port
-        self.chain_id = chain_id
-
-        self.web3 = Web3(HTTPProvider(f"HTTP://{self.ip}:{self.port}"))
-        assert self.web3.is_connected(), "Failed to connect to Ethereum node."
 
         self.account = self.web3.eth.account.from_key(self.private_key)
         assert self.account is not None, "Failed to create account from provided private key."
