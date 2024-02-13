@@ -24,10 +24,7 @@ import logging
 import sys
 
 from software_engineering_lab_in_cybersecurity import __version__
-from software_engineering_lab_in_cybersecurity.common_utils import (
-    parse_args,
-    setup_logging,
-)
+from software_engineering_lab_in_cybersecurity.utility import parse_args, setup_logging
 
 __author__ = "Witold Karaś"
 __copyright__ = "Witold Karaś"
