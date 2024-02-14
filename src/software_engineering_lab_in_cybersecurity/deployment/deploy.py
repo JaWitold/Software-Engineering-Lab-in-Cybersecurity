@@ -69,20 +69,6 @@ class ContractDeployer(BlockchainBase):
         _logger.info("Deployed contract")
 
     @staticmethod
-    def _find_contract_name(code: str) -> Union[str, None]:
-        """
-        Finds the contract name in the Solidity source code.
-
-        :param code: The source code of the Solidity contract.
-        :type code: str
-        :return: The name of the contract.
-        :rtype: str
-        """
-
-        match = re.search(r"is\s+(\w+)\s*{", code)
-        return match.group(1) if match else None
-
-    @staticmethod
     def _read_contract(contract_name: str, contracts: List[Tuple[str, str, str]] = None) -> List[Tuple[str, str, str]]:
         """
         Reads the Solidity contract file containing the specified contract name from the 'contracts' directory.
@@ -98,19 +84,28 @@ class ContractDeployer(BlockchainBase):
             contracts = []
 
         contracts_dir = os.path.join(os.getcwd(), "contracts")
+
+        prefix = r"contract\s+"
+        pattern = r"(\s*{|\s+is\s+(\w+))"
+
         for filename in os.listdir(contracts_dir):
             if filename.endswith(".sol"):
                 with open(os.path.join(contracts_dir, filename), "r", encoding="utf-8") as file:
                     content = file.read()
-                    if f"contract {contract_name}" in content and contract_name not in [
-                        name for name, _, _ in contracts
-                    ]:
+                    esc_input = re.escape(contract_name)
+
+                    matches = re.search(prefix + esc_input + pattern, content)
+                    if matches and contract_name not in [name for name, _, _ in contracts]:
                         contracts.insert(0, (contract_name, content, filename))
-                        parent = ContractDeployer._find_contract_name(content)
+                        parent = matches.group(2) if len(matches.groups()) > 1 else None
                         if parent is not None:
                             ContractDeployer._read_contract(parent, contracts)
+
         if len(contracts) == 0:
-            _logger.error("No contract named %s was found in the 'contracts' directory.", contract_name)
+            _logger.error(
+                "No contract named %s was found in the 'contracts' directory.",
+                contract_name,
+            )
             sys.exit(1)
         return contracts
 
@@ -131,7 +126,16 @@ class ContractDeployer(BlockchainBase):
                 "language": "Solidity",
                 "sources": {f_name: {"content": c_content} for _, c_content, f_name in code},
                 "settings": {
-                    "outputSelection": {"*": {"*": ["metadata", "evm.bytecode", "evm.bytecode.sourceMap", "abi"]}}
+                    "outputSelection": {
+                        "*": {
+                            "*": [
+                                "metadata",
+                                "evm.bytecode",
+                                "evm.bytecode.sourceMap",
+                                "abi",
+                            ]
+                        }
+                    }
                 },
             },
             solc_version=self.solidity_version,
@@ -208,4 +212,8 @@ class ContractDeployer(BlockchainBase):
         with open(deployed_contracts_file_path, "w", encoding="utf-8") as file:
             json.dump(data, file, indent=4, sort_keys=True)
 
-        _logger.info("Contract %s deployed and saved at %s", contract_name, receipt.contractAddress)
+        _logger.info(
+            "Contract %s deployed and saved at %s",
+            contract_name,
+            receipt.contractAddress,
+        )
