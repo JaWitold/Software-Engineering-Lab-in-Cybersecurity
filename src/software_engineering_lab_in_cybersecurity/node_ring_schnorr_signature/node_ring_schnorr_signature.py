@@ -6,7 +6,6 @@ import random
 from typing import List, Tuple
 
 from py_ecc.bn128 import G1, add, curve_order, eq, multiply, neg
-from py_ecc.fields import bn128_FQ
 from py_ecc.typing import Field, Point2D
 
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.elliptic_curve import (
@@ -152,7 +151,7 @@ class NodeRingSchnorrSignature:
         hash, and all the random values, modulo the curve order.
         """
         initial_sum = signer_r + private_key * master_hash
-        return initial_sum + sum(random_values) % curve_order
+        return (initial_sum + sum(random_values)) % curve_order
 
     @staticmethod
     def __generate_signer_randomness(product: Point2D[Field], signature_r: List[Point2D[Field]]):
@@ -196,9 +195,10 @@ class NodeRingSchnorrSignature:
     def __get_hash_for_message_randomness_and_signature(
         message: int, r: Point2D[Field], signature: SchnorrSignature
     ) -> int:
-        return bn128_FQ(
+        return (
             sol_hash(message, *convert_point_2d_to_list(r), *convert_point_2d_to_list(signature.r), signature.s)
-        ).n
+            % 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
+        )
 
     @staticmethod
     def __generate_unique_random_values(number: int) -> List[int]:
