@@ -3,12 +3,13 @@ CLI interface for operating blockchain.
 """
 
 import logging
+import os
 import sys
 from typing import Dict, List
 
 from dotenv import load_dotenv
 from py_ecc.bn128 import G1, multiply
-from py_ecc.fields import FQ
+from py_ecc.fields import bn128_FQ
 from py_ecc.typing import Field, Point2D
 
 from software_engineering_lab_in_cybersecurity import __version__
@@ -71,8 +72,7 @@ def select_private_key(accounts: Dict[str, str], logger: logging.Logger) -> str:
     if selection.isdigit() and 1 <= int(selection) <= len(accounts):
         # If the selection is a digit within the range of account numbers, select the corresponding private key
         selected_index = int(selection) - 1
-        selected_address = list(accounts.keys())[selected_index]
-        return accounts[selected_address]
+        return list(accounts.keys())[selected_index]
     # If the selection does not match any of the above conditions, log an error and request input again
     logger.error(
         "Invalid selection. Please enter a valid account number or a custom private key prefixed with 'custom:'."
@@ -112,7 +112,11 @@ def select_public_keys_ring(accounts: Dict[str, str], exclude_address: str) -> L
         if "," in choice:
             try:
                 x, y = map(int, choice.split(","))
-                selected_public_keys.append((FQ(x), FQ(y)))
+                pk = (bn128_FQ(x), bn128_FQ(y))
+                if pk not in selected_public_keys and pk != multiply(G1, int(accounts[exclude_address], 16)):
+                    selected_public_keys.append(pk)
+                else:
+                    _logger.warning("Public key has been already added to the ring")
             except ValueError:
                 print("Invalid custom key format. Please input as 'x,y' where x and y are integers.")
         else:
@@ -149,6 +153,12 @@ def main(args: List[str]) -> None:
                 "help": "Private key for signature. If not provided, you'll be prompted to select one.",
                 "default": None,
             },
+            "--contract-address": {
+                "dest": "contract_address",
+                "type": str,
+                "help": "Address of contract. ",
+                "default": os.getenv("CONTRACT_ADDRESS"),
+            },
             **account_config,
         },
     }
@@ -164,11 +174,10 @@ def main(args: List[str]) -> None:
             account_address, account_private_key = select_account_for_transaction(_logger)
 
         public_keys_ring = select_public_keys_ring(accounts, account_address)
-        print(message, message_private_key, public_keys_ring)
 
         signature = NodeRingSchnorrSignature.sign(message, message_private_key, public_keys_ring)
         client = BlockchainClient(args.ip, args.port, args.chain_id)
-        client.store_signature(account_address, account_private_key, signature)
+        client.store_signature(args.contract_address, account_private_key, message, signature)
     else:
         _logger.error("No operation specified. Use --sign <message> to sign or --verify to verify.")
         sys.exit(1)
