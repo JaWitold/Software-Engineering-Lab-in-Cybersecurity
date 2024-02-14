@@ -7,7 +7,7 @@ import logging
 import os
 import re
 import sys
-from typing import List, Tuple, Type, Union
+from typing import List, Tuple
 
 from eth_account.signers.local import LocalAccount
 from hexbytes import HexBytes
@@ -74,11 +74,12 @@ class ContractDeployer(BlockchainBase):
         """
         Reads the Solidity contract file containing the specified contract name from the 'contracts' directory.
 
-        :param contracts:
         :param contract_name: The name of the Solidity contract to read.
         :type contract_name: str
+        :param contracts: A list of tuples containing contract name, content, and filename for each contract.
+        :type contracts: List[Tuple[str, str, str]]
         :return: The content of the Solidity contract file.
-        :rtype: str
+        :rtype: List[Tuple[str, str, str]]
         :raises FileNotFoundError: If no contract matching the specified name is found.
         """
         if contracts is None:
@@ -110,7 +111,7 @@ class ContractDeployer(BlockchainBase):
             sys.exit(1)
         return contracts
 
-    def compile_contract(self, contract_name: str, code: List[Tuple[str, str, str]]) -> Union[Type[Contract], Contract]:
+    def compile_contract(self, contract_name: str, code: List[Tuple[str, str, str]]) -> Contract:
         """
         Compiles the specified Solidity contract along with its dependencies.
 
@@ -119,6 +120,7 @@ class ContractDeployer(BlockchainBase):
         :param code: A list of tuples containing contract name, content, and filename for each contract and dependency.
         :type code: List[Tuple[str, str, str]]
         :return: A Web3 contract object for the compiled main contract.
+        :rtype: Contract
         """
         install_solc(self.solidity_version)
 

@@ -104,7 +104,7 @@ class NodeRingSchnorrSignature:
             message, signer_r_point, signer_sub_signature
         )
 
-        # Step 6: Add all random values to the master sum
+        # Step 6: Add all random values to the signature sum
         signature_sum = NodeRingSchnorrSignature.__compute_signature_sum(
             signer_hash, private_key, random_values, signer_r
         )
@@ -197,7 +197,7 @@ class NodeRingSchnorrSignature:
     ) -> int:
         return (
             sol_hash(message, *convert_point_2d_to_list(r), *convert_point_2d_to_list(signature.r), signature.s)
-            % 0x30644E72E131A029B85045B68181585D2833E84879B9709143E1F593F0000001
+            % curve_order
         )
 
     @staticmethod
