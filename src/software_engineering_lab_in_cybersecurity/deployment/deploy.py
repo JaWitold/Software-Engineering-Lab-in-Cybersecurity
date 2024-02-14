@@ -7,8 +7,9 @@ import logging
 import os
 import re
 import sys
-from typing import List, Tuple, Type, Union
+from typing import List, Tuple, Union
 
+from eth_account.signers.local import LocalAccount
 from hexbytes import HexBytes
 from solcx import compile_standard, install_solc
 from web3.contract import Contract
@@ -29,6 +30,7 @@ class ContractDeployer(BlockchainBase):
     """
 
     solidity_version = "0.8.18"
+    """The Solidity compiler version to use for contract compilation."""
 
     def __init__(self, account_address: str, private_key: str, ip: str, port: str, chain_id: str) -> None:
         """
@@ -63,7 +65,7 @@ class ContractDeployer(BlockchainBase):
         solidity_code = self._read_contract(contract_name)
         compiled_contract = self.compile_contract(contract_name, solidity_code)
         transaction_hash = self.prepare_transaction(compiled_contract)
-        receipt = self.send_transaction(transaction_hash)
+        receipt = self.wait_for_receipt(transaction_hash)
         self.save_compiled_contract(contract_name, receipt, compiled_contract)
 
         _logger.info("Deployed contract")
@@ -87,9 +89,10 @@ class ContractDeployer(BlockchainBase):
         """
         Reads the Solidity contract file containing the specified contract name from the 'contracts' directory.
 
-        :param contracts:
         :param contract_name: The name of the Solidity contract to read.
         :type contract_name: str
+        :param contracts: A list of tuples containing contract name, content, and filename for each contract.
+        :type contracts: List[Tuple[str, str, str]]
         :return: The content of the Solidity contract file.
         :rtype: str
         :raises FileNotFoundError: If no contract matching the specified name is found.
@@ -114,7 +117,7 @@ class ContractDeployer(BlockchainBase):
             sys.exit(1)
         return contracts
 
-    def compile_contract(self, contract_name: str, code: List[Tuple[str, str, str]]) -> Union[Type[Contract], Contract]:
+    def compile_contract(self, contract_name: str, code: List[Tuple[str, str, str]]) -> Contract:
         """
         Compiles the specified Solidity contract along with its dependencies.
 
@@ -123,6 +126,7 @@ class ContractDeployer(BlockchainBase):
         :param code: A list of tuples containing contract name, content, and filename for each contract and dependency.
         :type code: List[Tuple[str, str, str]]
         :return: A Web3 contract object for the compiled main contract.
+        :rtype: Contract
         """
         install_solc(self.solidity_version)
 
@@ -143,34 +147,27 @@ class ContractDeployer(BlockchainBase):
 
         return self.web3.eth.contract(abi=metadata["abi"], bytecode=metadata["evm"]["bytecode"]["object"])
 
-    def prepare_transaction(self, contract: Contract) -> HexBytes:
+    def prepare_transaction(
+        self, contract: Contract, account: LocalAccount = None, private_key: str = None
+    ) -> HexBytes:
         """
-        Prepares the transaction for deploying the contract.
+        Prepares a transaction for sending to the specified contract.
 
-        :param contract: The Web3 contract object to deploy.
+        This method extends the functionality of the parent class's `prepare_transaction` method, allowing for optional
+        specification of an account and a private key. If not provided, the method uses instance attributes as defaults.
+
+        :param contract: The contract instance to which the transaction will be sent.
         :type contract: Contract
-        :return: The hash of the sent transaction.
+        :param account: The account from which the transaction is made. Defaults to `self.account` if not provided.
+        :type account: LocalAccount, optional
+        :param private_key: The private key for signing the transaction. Defaults to `self.private_key` if not provided.
+        :type private_key: str, optional
+        :return: A `HexBytes` object representing the prepared transaction's hash.
+        :rtype: HexBytes
         """
-        transaction = contract.constructor().build_transaction(
-            {
-                "from": self.account.address,
-                "nonce": self.web3.eth.get_transaction_count(self.account.address),
-                "chainId": int(self.chain_id),
-                "gasPrice": self.web3.eth.gas_price,
-            }
+        return super().prepare_transaction(
+            contract.constructor(), account or self.account, private_key or self.private_key
         )
-        signature = self.web3.eth.account.sign_transaction(transaction, self.private_key)
-        return self.web3.eth.send_raw_transaction(signature.rawTransaction)
-
-    def send_transaction(self, transaction_hash: HexBytes) -> TxReceipt:
-        """
-        Waits for the transaction to be mined and returns the transaction receipt.
-
-        :param transaction_hash: The hash of the transaction to wait for.
-        :type transaction_hash: HexBytes
-        :return: The transaction receipt.
-        """
-        return self.web3.eth.wait_for_transaction_receipt(transaction_hash)
 
     @staticmethod
     def save_compiled_contract(contract_name: str, receipt: TxReceipt, compiled_contract: Contract) -> None:
