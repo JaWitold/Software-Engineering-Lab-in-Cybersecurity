@@ -34,8 +34,10 @@ class BlockchainClient(BlockchainBase):
         This method should be implemented to load compiled contracts, typically from a file or
         a predefined location where compiled contract artifacts are stored.
 
-        :return: A mapping of contract names to their compiled artifacts.
-        :rtype: dict
+        :param contract_address: The address of the contract to be loaded.
+        :type contract_address: str
+        :return: The compiled contract instance.
+        :rtype: Contract
         """
         deployed_contracts_file_path = os.path.join(os.getcwd(), "deployment", "deployed_contracts.json")
         with open(deployed_contracts_file_path, "r", encoding="utf-8") as file:
@@ -44,23 +46,22 @@ class BlockchainClient(BlockchainBase):
 
     def store_signature(
         self, contract_address: str, account_private_key: str, message: int, signature: NodeRingSchnorrSignature
-    ):
+    ) -> None:
         """
         Store a signature on the blockchain.
 
         Given an account's address and private key, and a signature object, this method sends a transaction
         to store the signature on the blockchain.
 
-        :param message:
-        :type message: int
-        :param contract_address:
+        :param contract_address: The address of the contract where the signature will be stored.
         :type contract_address: str
         :param account_private_key: The private key associated with the account for signing the transaction.
         :type account_private_key: str
+        :param message: The message to be signed.
+        :type message: int
         :param signature: The signature object to be stored on the blockchain.
-        :type signature: dict
+        :type signature: NodeRingSchnorrSignature
         """
-
         account = self.web3.eth.account.from_key(account_private_key)
         assert account is not None, "Failed to create account from provided private key."
 

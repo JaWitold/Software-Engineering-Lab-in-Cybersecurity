@@ -11,7 +11,12 @@ load_dotenv()
 
 
 def load_accounts(_logger: Logger = None) -> Dict[str, Dict[str, str]]:
-    """Load accounts and their private keys from the accounts.json file."""
+    """
+    Load accounts and their private keys from the accounts.json file.
+
+    :return: A dictionary of accounts and their private keys.
+    :rtype: Dict[str, Dict[str, str]]
+    """
     try:
         with open("accounts/accounts.json", "r", encoding="UTF-8") as file:
             return json.load(file)

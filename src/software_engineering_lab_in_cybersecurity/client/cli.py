@@ -89,7 +89,7 @@ def select_public_keys_ring(accounts: Dict[str, str], exclude_address: str) -> L
     :param exclude_address: The address of the signer to exclude from the selection.
     :type exclude_address: str
     :return: A list of selected public keys for the ring.
-    :rtype: List[Point2D]
+    :rtype: List[Point2D[Field]]
     """
     available_addresses = [addr for addr in accounts.keys() if addr != exclude_address]
     selected_public_keys = []
