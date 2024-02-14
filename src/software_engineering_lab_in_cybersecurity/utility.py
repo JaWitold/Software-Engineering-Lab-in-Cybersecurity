@@ -5,6 +5,10 @@ import sys
 from logging import DEBUG, INFO, Logger, basicConfig
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def load_accounts(_logger: Logger = None) -> Dict[str, Dict[str, str]]:
     """Load accounts and their private keys from the accounts.json file."""
