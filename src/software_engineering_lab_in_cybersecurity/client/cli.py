@@ -5,7 +5,7 @@ CLI interface for operating blockchain.
 import logging
 import os
 import sys
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv
 from py_ecc.bn128 import G1, multiply
@@ -125,6 +125,46 @@ def select_public_keys_ring(accounts: Dict[str, str], exclude_address: str) -> L
     return selected_public_keys
 
 
+def select_signature(signatures):
+    """
+    Allows the user to select a signature from a list for verification purposes.
+
+    :param signatures: A list of available signatures for selection.
+    :type signatures: List[str]
+    :return: The selected signature.
+    :rtype: str
+    """
+    print("Select signature to verify:")
+    while True:
+        for i, signature in enumerate(signatures, start=1):
+            print(f"[{i}] {signature}")
+        choice = get_input_with_prompt("Select a signature by index number:")
+
+        if choice.isdigit() and 1 <= int(choice) <= len(signatures):
+            return signatures[int(choice) - 1]
+        print("Invalid selection. Please try again.")
+
+
+def select_public_key() -> Tuple[bn128_FQ, bn128_FQ]:
+    """
+    Prompts the user to input a public key in a specific format for signature verification.
+
+    :return: A tuple representing the public key.
+    :rtype: Tuple[Field, Field]
+    """
+    print("Select public key, input key as 'x,y':")
+    while True:
+        input_key = get_input_with_prompt("Select public key, input key as 'x,y':")
+        if "," in input_key:
+            try:
+                x_str, y_str = input_key.split(",")
+                return bn128_FQ(int(x_str)), bn128_FQ(int(y_str))
+            except ValueError:
+                print("Invalid custom key format. Please input as 'x,y' where x and y are integers.")
+        else:
+            print("Invalid selection. Please try again.")
+
+
 def main(args: List[str]) -> None:
     """
     Handle CLI for NodeRingSchnorrSignature operations.
@@ -136,6 +176,17 @@ def main(args: List[str]) -> None:
         "version": f"Software-Engineering-Lab-in-Cybersecurity {__version__}",
         "custom_args": {
             **connection_config,
+            "--verify": {
+                "dest": "verify",
+                "action": "store_true",
+                "help": "Flag to initiate hierarchical signature verification.",
+            },
+            "--signature-public-key": {
+                "dest": "signature_public_key",
+                "type": str,
+                "help": "Public key of the signature. If not provided, you'll be prompted to provide one.",
+                "default": None,
+            },
             "--sign": {
                 "dest": "sign",
                 "action": "store_true",
@@ -174,10 +225,34 @@ def main(args: List[str]) -> None:
             account_address, account_private_key = select_account_for_transaction(_logger)
 
         public_keys_ring = select_public_keys_ring(accounts, account_address)
-
         signature = NodeRingSchnorrSignature.sign(message, message_private_key, public_keys_ring)
-        client = BlockchainClient(args.ip, args.port, args.chain_id)
-        client.store_signature(args.contract_address, account_private_key, message, signature)
+
+        client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
+        client.store_signature(account_private_key, message, signature)
+
+        _logger.info("Signature public key: %s", signature.signature_public_key)
+    elif args.verify:
+        # ask for signature public key (x, y)
+        signature_public_key = (
+            tuple(map(bn128_FQ, map(int, args.signature_public_key.split(","))))[0:2]
+            if args.signature_public_key and "," in args.signature_public_key
+            else select_public_key()
+        )
+
+        if len(signature_public_key) != 2:
+            _logger.error("Invalid public key provided: %s, expected (x, y)", args.signature_public_key)
+            sys.exit(1)
+
+        client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
+        signatures = client.get_signatures_by_new_public_key(signature_public_key)
+        print(type(signatures[0][0]), signatures)
+        if len(signatures) == 0:
+            _logger.error("No signatures found for %s", args.signature_public_key)
+            sys.exit(1)
+
+        signature = signatures[0] if len(signatures) == 1 else select_signature(signatures)
+
+        print("Verification result: %s", client.verify_signature(signature))
     else:
         _logger.error("No operation specified. Use --sign <message> to sign or --verify to verify.")
         sys.exit(1)
