@@ -8,7 +8,7 @@ from software_engineering_lab_in_cybersecurity.utility import load_accounts
 TEST_IP = os.getenv("CONTRACT_IP", "127.0.0.1")
 TEST_PORT = os.getenv("CONTRACT_PORT", "8545")
 TEST_CHAIN_ID = os.getenv("CHAIN_ID", "1337")
-TEST_CONTAINER_NAME = os.getenv("CONTAINER_NAME", "software-engineering-lab-in-cybersecurity_ganache")
+TEST_CONTAINER_NAME = os.getenv("CONTAINER_NAME", "ganache-container")
 
 
 def _check_docker_container_exists(container_name):
@@ -44,8 +44,8 @@ def deploy_contract_for_tests(contract_name: str):
         pass
 
     account_idx = 0
-    assert _check_docker_container_exists(TEST_CONTAINER_NAME), "Docker Ganache not launched"
-    assert _chek_connection(TEST_IP, TEST_PORT), "Docker connection error"
+    assert _check_docker_container_exists(TEST_CONTAINER_NAME), f"Docker Ganache not launched {TEST_CONTAINER_NAME=}"
+    assert _chek_connection(TEST_IP, TEST_PORT), f"Docker connection error {TEST_IP=}"
     accounts = load_accounts(None)
     addresses = list(accounts["private_keys"].keys())
     assert len(addresses) > 0, "Account addresses not loaded"
