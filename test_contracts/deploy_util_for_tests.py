@@ -44,12 +44,24 @@ def deploy_contract_for_tests(contract_name: str):
         pass
 
     account_idx = 0
+    account_address, priv_key = get_account_address_and_priv_key(account_idx)
     assert _check_docker_container_exists(TEST_CONTAINER_NAME), f"Docker Ganache not launched {TEST_CONTAINER_NAME=}"
     assert _chek_connection(TEST_IP, TEST_PORT), f"Docker connection error {TEST_IP=}"
+
+    deployer = ContractDeployer(account_address, priv_key, TEST_IP, TEST_PORT, TEST_CHAIN_ID)
+    return deployer.deploy_contract(contract_name)
+
+
+def get_account_address_and_priv_key(account_idx: int):
+    """
+    Returns account address and corresponding private key for it
+
+    :param account_idx: index of account to return
+    "type account_idx: int
+    """
     accounts = load_accounts(None)
     addresses = list(accounts["private_keys"].keys())
     assert len(addresses) > 0, "Account addresses not loaded"
     account_address = addresses[account_idx]
-    private_key = accounts["private_keys"][account_address]
-    deployer = ContractDeployer(account_address, private_key, TEST_IP, TEST_PORT, TEST_CHAIN_ID)
-    return deployer.deploy_contract(contract_name)
+    priv_key = accounts["private_keys"][account_address]
+    return account_address, priv_key

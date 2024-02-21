@@ -4,8 +4,8 @@ pragma solidity ^0.8.18;
 import "./NodeRingSchnorrSignature.sol";
 
 // A contract that stores and verifies Schnorr node ring signatures.
-// It extends SchnorrSignatureNodeRing to utilize its node ring signature verification capabilities.
-contract SignatureStorage is SchnorrSignatureNodeRing {
+// It extends NodeRingSchnorrSignature to utilize its node ring signature verification capabilities.
+contract SignatureStorage is NodeRingSchnorrSignature {
     // Defines a signature structure to hold all components of a node ring Schnorr signature.
     struct Signature {
         uint256 message;            // The message that was signed.
