@@ -43,7 +43,7 @@ def store_signatures_performance():
 
         avg_time /= num_of_trials
         avg_gas /= num_of_trials
-        print(f"{i};{avg_time};{avg_gas}", flush=True)
+        print(f"{i},{avg_time},{avg_gas}", flush=True)
         i += 1
 
 
