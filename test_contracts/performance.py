@@ -23,7 +23,7 @@ def store_signatures_performance():
     max_num_of_ext_pubkeys = 40
     num_of_trials = 100
     i = 1
-    print("idx;time[s];gas")
+    print("idx,time[s],gas")
     while i < max_num_of_ext_pubkeys:
         avg_time = 0
         avg_gas = 0
