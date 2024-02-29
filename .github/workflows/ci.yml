@@ -34,10 +34,10 @@ jobs:
       wheel-distribution: ${{ steps.wheel-distribution.outputs.path }}
     steps:
       - uses: actions/checkout@v3
-        with: {fetch-depth: 0}  # deep clone for setuptools-scm
+        with: { fetch-depth: 0 } # deep clone for setuptools-scm
       - uses: actions/setup-python@v4
         id: setup-python
-        with: {python-version: "3.10"}
+        with: { python-version: "3.10" }
       - name: Run static analysis and format checkers
         run: pipx run pre-commit run --all-files --show-diff-on-failure
       - name: Build package distribution files
@@ -61,11 +61,11 @@ jobs:
     strategy:
       matrix:
         python:
-        - "3.10"  # newest Python that is stable
+          - "3.10" # newest Python that is stable
         platform:
-        - ubuntu-latest
-        - macos-latest
-        - windows-latest
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
@@ -75,12 +75,31 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Retrieve pre-built distribution files
         uses: actions/download-artifact@v3
-        with: {name: python-distribution-files, path: dist/}
+        with: { name: python-distribution-files, path: dist/ }
       - name: Run tests
         run: >-
           pipx run --python '${{ steps.setup-python.outputs.python-path }}'
           tox --installpkg '${{ needs.prepare.outputs.wheel-distribution }}'
           -- -rFEx --durations 10 --color yes  # pytest args
+      - name: Build Docker Image and Run Container
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+          docker-compose up -d
+          sleep 15s
+      - name: Display Ganache container IP
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          CONTAINER_IP=$(docker inspect ganache-container -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}')
+          echo "Container IP: $CONTAINER_IP"
+          echo "CONTRACT_IP=$CONTAINER_IP" >> $GITHUB_ENV
+      - name: Run test_contracts
+        if: matrix.platform == 'ubuntu-latest'
+        run: >-
+          pipx run --python '${{ steps.setup-python.outputs.python-path }}'
+          tox --installpkg '${{ needs.prepare.outputs.wheel-distribution }}'
+          -- -rFEx --durations 10 --color yes test_contracts
       - name: Generate coverage report
         run: pipx run coverage lcov -o coverage.lcov
       - name: Upload partial coverage report
@@ -110,10 +129,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
-        with: {python-version: "3.10"}
+        with: { python-version: "3.10" }
       - name: Retrieve pre-built distribution files
         uses: actions/download-artifact@v3
-        with: {name: python-distribution-files, path: dist/}
+        with: { name: python-distribution-files, path: dist/ }
 #      - name: Publish Package
 #        env:
 #          # TODO: Set your PYPI_TOKEN as a secret using GitHub UI

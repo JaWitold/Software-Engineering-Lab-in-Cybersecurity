@@ -95,6 +95,8 @@ class BlockchainClient(BlockchainBase):
         _logger.info("Gas used: %s", receipt.gasUsed)
         _logger.debug("Block: %s", self.web3.eth.get_block(receipt.blockNumber))
 
+        return receipt
+
     def get_signatures_by_new_public_key(self, signature_public_key: Point2D[Field]) -> List[Tuple[Any]]:
         """
         Retrieves signatures associated with a given public key from the blockchain.
@@ -108,12 +110,23 @@ class BlockchainClient(BlockchainBase):
             convert_point_2d_to_list(signature_public_key)
         ).call()
 
-    def verify_signature(self, signature: List[Tuple[Any]]) -> bool:
+    def get_signatures_by_public_key(self, signature_public_key: Point2D[Field]) -> List[Tuple[Any]]:
+        """
+        Retrieves signatures associated with a given public key from the blockchain.
+
+        :param signature_public_key: Public key to search for signatures.
+        :type signature_public_key: Point2D[Field]
+        :return: A list of signatures associated with the public key.
+        :rtype: List[Tuple[Any]]
+        """
+        return self.contract.functions.getSignaturesByPublicKey(convert_point_2d_to_list(signature_public_key)).call()
+
+    def verify_signature(self, signature: Tuple[Any]) -> bool:
         """
         Verifies a signature stored on the blockchain.
 
         :param signature: The signature data to verify.
-        :type signature: List[Tuple[Any]]
+        :type signature: Tuple[Any]
         :return: Boolean indicating whether the signature is valid.
         :rtype: bool
         """

@@ -3,7 +3,7 @@ pragma solidity ^0.8.18;
 
 import "./SchnorrSignature.sol";
 
-contract SchnorrSignatureNodeRing is SchnorrSignature {
+contract NodeRingSchnorrSignature is SchnorrSignature {
 
     // Verifies a node ring Schnorr signature.
     // Parameters:

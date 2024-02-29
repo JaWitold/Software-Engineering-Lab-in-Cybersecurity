@@ -6,7 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: ganache
-    container_name: ganache
+    container_name: ganache-container
+    image: ganache-docker-img:latest
     volumes:
       - ./accounts/:/home/accounts
     ports:

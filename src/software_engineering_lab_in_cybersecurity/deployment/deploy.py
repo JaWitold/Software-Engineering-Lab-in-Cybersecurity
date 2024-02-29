@@ -62,15 +62,16 @@ class ContractDeployer(BlockchainBase):
         :type contract_name: str
         """
         solidity_code = self._read_contract(contract_name)
-        compiled_contract = self.compile_contract(contract_name, solidity_code)
+        compiled_contract = self.compile_contract(solidity_code)
         transaction_hash = self.prepare_transaction(compiled_contract)
         receipt = self.wait_for_receipt(transaction_hash)
         self.save_compiled_contract(contract_name, receipt, compiled_contract)
 
         _logger.info("Deployed contract")
+        return receipt
 
     @staticmethod
-    def _read_contract(contract_name: str, contracts: List[Tuple[str, str, str]] = None) -> List[Tuple[str, str, str]]:
+    def _read_contract(contract_name: str) -> List[Tuple[str, str, str]]:
         """
         Reads the Solidity contract file containing the specified contract name from the 'contracts' directory.
 
@@ -82,41 +83,34 @@ class ContractDeployer(BlockchainBase):
         :rtype: List[Tuple[str, str, str]]
         :raises FileNotFoundError: If no contract matching the specified name is found.
         """
-        if contracts is None:
-            contracts = []
+        contract = None
 
         contracts_dir = os.path.join(os.getcwd(), "contracts")
 
         prefix = r"contract\s+"
-        pattern = r"(\s*{|\s+is\s+(\w+))"
+        pattern = r"(\s*{|\s+is\s+\w+)"
+        contract_name_esc_regex = re.escape(contract_name)
+        compiled_regex = re.compile(prefix + contract_name_esc_regex + pattern)
 
         for filename in os.listdir(contracts_dir):
             if filename.endswith(".sol"):
                 with open(os.path.join(contracts_dir, filename), "r", encoding="utf-8") as file:
                     content = file.read()
-                    esc_input = re.escape(contract_name)
-
-                    matches = re.search(prefix + esc_input + pattern, content)
-                    if matches and contract_name not in [name for name, _, _ in contracts]:
-                        contracts.insert(0, (contract_name, content, filename))
-                        parent = matches.group(2) if len(matches.groups()) > 1 else None
-                        if parent is not None:
-                            ContractDeployer._read_contract(parent, contracts)
-
-        if len(contracts) == 0:
+                    if compiled_regex.search(content):
+                        contract = (contract_name, content, filename)
+                        break
+        if not contract:
             _logger.error(
                 "No contract named %s was found in the 'contracts' directory.",
                 contract_name,
             )
             sys.exit(1)
-        return contracts
+        return contract
 
-    def compile_contract(self, contract_name: str, code: List[Tuple[str, str, str]]) -> Contract:
+    def compile_contract(self, code: Tuple[str, str, str]) -> Contract:
         """
         Compiles the specified Solidity contract along with its dependencies.
 
-        :param contract_name: The name of the main contract to compile.
-        :type contract_name: str
         :param code: A list of tuples containing contract name, content, and filename for each contract and dependency.
         :type code: List[Tuple[str, str, str]]
         :return: A Web3 contract object for the compiled main contract.
@@ -124,10 +118,12 @@ class ContractDeployer(BlockchainBase):
         """
         install_solc(self.solidity_version)
 
+        c_name, content, f_name = code
+
         compiled_sol = compile_standard(
             {
                 "language": "Solidity",
-                "sources": {f_name: {"content": c_content} for _, c_content, f_name in code},
+                "sources": {f_name: {"content": content}},
                 "settings": {
                     "outputSelection": {
                         "*": {
@@ -145,7 +141,6 @@ class ContractDeployer(BlockchainBase):
             base_path=os.path.join(os.getcwd(), "contracts"),
         )
 
-        c_name, _, f_name = list(filter(lambda x: x[0] == contract_name, code)).pop()
         metadata = compiled_sol["contracts"][f_name][c_name]
 
         return self.web3.eth.contract(abi=metadata["abi"], bytecode=metadata["evm"]["bytecode"]["object"])
