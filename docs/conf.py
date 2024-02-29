@@ -88,7 +88,7 @@ master_doc = "index"
 
 # General information about the project.
 project = "Software-Engineering-Lab-in-Cybersecurity"
-copyright = "2024, Witold Karaś"
+copyright = "2024, Witold Karaś, Adam Niezgoda"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -246,7 +246,7 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-    ("index", "user_guide.tex", "Software-Engineering-Lab-in-Cybersecurity Documentation", "Witold Karaś", "manual")
+    ("index", "user_guide.tex", "Software-Engineering-Lab-in-Cybersecurity Documentation", "Witold Karaś, Adam Niezgoda", "manual")
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

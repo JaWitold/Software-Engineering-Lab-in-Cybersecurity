@@ -7,11 +7,6 @@ from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_
     NodeRingSchnorrSignature,
 )
 
-__author__ = "Witold Karaś"
-__copyright__ = "Witold Karaś"
-__license__ = "MIT"
-__email__ = "<witekkaras00@gmail.com>"
-
 
 class TestNodeRingSchnorrSignature(unittest.TestCase):
     """
