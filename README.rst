@@ -5,7 +5,7 @@ Hierarchical Ring Signatures Revisited – Unconditionally and Perfectly Anonymo
 Introduction
 ------------
 
-This project aims to (briefly describe the purpose of your project, what problems it solves, and how). It incorporates Python for backend logic and Solidity for smart contract development, facilitating seamless interaction with the Ethereum blockchain.
+This project aims to implement anonymous hierarchical ring signatures stored on blockchain nodes. It incorporates Python for backend logic and Solidity for smart contract development, facilitating seamless interaction with the Ethereum blockchain.
 
 The structure and methodologies are inspired by the concepts discussed in the paper "Hierarchical Ring Signatures Revisited – Unconditionally and Perfectly Anonymous Schnorr Version" by Łukasz Krzywiecki, Małgorzata Sulkowska, and Filip Zagórski, which can be accessed `here <https://link.springer.com/chapter/10.1007/978-3-319-24126-5_19>`_. Special acknowledgment to Prof. Krzywiecki for the foundational theories and frameworks utilized in this project. More about Prof. Krzywiecki's work can be found on his `web page <https://cs.pwr.edu.pl/krzywiecki/index.html>`_.
 
