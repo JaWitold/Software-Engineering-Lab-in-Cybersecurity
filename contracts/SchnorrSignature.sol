@@ -21,7 +21,7 @@ contract SchnorrSignature is EllipticCurve {
     function verifySignature(uint256 message, uint256[2] memory publicKey, uint256[2] memory R, uint256 s) public view returns (bool) {
         // Calculate the hash of the concatenation of X, Y of the R value and the message.
         // This represents the challenge in the Schnorr signature scheme.
-        uint256 h = hash(abi.encodePacked(R[0], R[1], message));
+        uint256 h = hash(abi.encode(R[0], R[1], message));
 
         // Compute X + h * A, where A is the public key.
         // This is the other part of the verification equation in Schnorr's signature.

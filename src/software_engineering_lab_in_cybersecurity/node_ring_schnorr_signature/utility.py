@@ -1,7 +1,5 @@
 from Crypto.Hash import keccak
-from eth_abi import packed
-from py_ecc.fields import bn128_FQ
-from py_ecc.fields.field_elements import IntOrFQ
+from eth_abi import encode
 
 
 def keccak256(arg: bytes) -> bytes:
@@ -18,34 +16,34 @@ def keccak256(arg: bytes) -> bytes:
     return hasher.digest()
 
 
-def sol_hash(*args: IntOrFQ) -> int:
+def sol_hash(*args: int) -> int:
     """
-    Compute the hash of the given arguments analogous to Solidity's keccak256 applied to abi.encodePacked.
+    Compute the hash of the given arguments analogous to Solidity's keccak256 applied to abi.encode.
     This function is useful for generating hashes in a manner consistent with Solidity smart contracts,
     especially for Ethereum blockchain applications.
 
-    :param args: Variable number of arguments which can be integers or py_ecc.fields.bn128_FQ objects.
+    :param args: Variable number of arguments which can be only integers
                  These are the values to be tightly packed and hashed.
-    :type args: IntOrFQ
+    :type args: int
     :return: The hash of the encoded arguments as an integer.
     :rtype: int
     """
-    return int.from_bytes(keccak256(encode_packed(*args)), "big")
+    return int.from_bytes(keccak256(sol_encode(*args)), "big")
 
 
-def encode_packed(*args: IntOrFQ) -> bytes:
+def sol_encode(*args: int) -> bytes:
     """
-    Replicates Solidity's `abi.encodePacked` functionality in Python. This function encodes any number of
-    arguments, specifically integers or py_ecc.fields.bn128_FQ objects, and encodes them as a concatenated byte string.
-    The encoding is done based on the assumption that all arguments are uint256, mirroring Solidity's behavior for
-    tightly packed encoding.
+    Replicates Solidity's `abi.encode` functionality in Python. This function encodes any number of
+    integers arguments and encodes them as a concatenated byte string.
+    The encoding is done based on the assumption that all arguments are uint256, mirroring Solidity's behavior
+    of abi.encode.
 
-    :param args: Variable number of arguments to be encoded, supporting integers and py_ecc.fields.bn128_FQ objects.
-    :type args: IntOrFQ
-    :return: A bytes object representing the tightly packed encoding of the input arguments.
+    :param args: Variable number of arguments to be encoded, supporting integers
+    :type args: int
+    :return: A bytes object representing the encoding of the input arguments.
     :rtype: bytes
     """
-    return packed.encode_packed(
+    return encode(
         ["uint256" for _ in args],
-        [int(str(arg)) if isinstance(arg, bn128_FQ) else arg for arg in args],
+        list(args),
     )
