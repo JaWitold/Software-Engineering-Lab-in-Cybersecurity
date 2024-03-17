@@ -47,12 +47,7 @@ contract SignatureStorage is NodeRingSchnorrSignature {
         uint256[2][] memory publicKeys
     ) public {
         // Verification step to ensure the integrity and authenticity of the provided signature.
-        require(Rs.length == RSigmas.length &&
-            RSigmas.length == sSigmas.length &&
-            sSigmas.length == publicKeys.length &&
-            verifyNodeRingSignature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys),
-            "Invalid signature or lengths of arrays"
-        );
+        require(verifyNodeRingSignature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys), "Invalid signature");
 
         // Constructing a new signature record.
         Signature memory signature = Signature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys);
