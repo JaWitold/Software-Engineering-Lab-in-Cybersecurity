@@ -43,7 +43,7 @@ contract NodeRingSchnorrSignature is SchnorrSignature {
 
             // Compute hash of the message combined with the R and RSigma values, and the sSigma for this iteration.
             // This hash represents a unique challenge for each signer's contribution.
-            uint256 h = hash(abi.encodePacked(message, Rs[i][0], Rs[i][1], RSigmas[i][0], RSigmas[i][1], sSigmas[i]));
+            uint256 h = hash(abi.encode(message, Rs[i][0], Rs[i][1], RSigmas[i][0], RSigmas[i][1], sSigmas[i]));
 
             // Aggregate the sum of all R points and public key points weighted by the hash.
             // This is part of the verification equation for the ring signature.

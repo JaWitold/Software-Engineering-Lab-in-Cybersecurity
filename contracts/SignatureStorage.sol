@@ -21,10 +21,10 @@ contract SignatureStorage is NodeRingSchnorrSignature {
     Signature[] public storedSignatures;
 
     // Mapping to associate public keys with indices of signatures in which they are used.
-    mapping(bytes => uint256[]) public signatureIndicesByPublicKey;
+    mapping(uint256 => mapping(uint256 => uint256[])) public signatureIndicesByPublicKey;
 
     // Mapping to associate new public keys with indices of signatures where they serve as the combined public key.
-    mapping(bytes => uint256[]) public signatureIndicesByNewPublicKey;
+    mapping(uint256 => mapping(uint256 => uint256[])) public signatureIndicesByNewPublicKey;
 
     // Stores a new signature after verification.
     // Validates the signature using `verifyNodeRingSignature` before storage.
@@ -47,7 +47,12 @@ contract SignatureStorage is NodeRingSchnorrSignature {
         uint256[2][] memory publicKeys
     ) public {
         // Verification step to ensure the integrity and authenticity of the provided signature.
-        require(verifyNodeRingSignature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys), "Invalid signature");
+        require(Rs.length == RSigmas.length &&
+            RSigmas.length == sSigmas.length &&
+            sSigmas.length == publicKeys.length &&
+            verifyNodeRingSignature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys),
+            "Invalid signature or lengths of arrays"
+        );
 
         // Constructing a new signature record.
         Signature memory signature = Signature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys);
@@ -58,23 +63,23 @@ contract SignatureStorage is NodeRingSchnorrSignature {
 
         // Indexing the signature by each public key.
         for (uint256 i = 0; i < publicKeys.length; i++) {
-            signatureIndicesByPublicKey[abi.encodePacked(publicKeys[i][0], publicKeys[i][1])].push(signatureIndex);
+            signatureIndicesByPublicKey[publicKeys[i][0]][publicKeys[i][1]].push(signatureIndex);
         }
 
         // Indexing the signature by the new public key.
-        signatureIndicesByNewPublicKey[abi.encodePacked(newPublicKey[0], newPublicKey[1])].push(signatureIndex);
+        signatureIndicesByNewPublicKey[newPublicKey[0]][newPublicKey[1]].push(signatureIndex);
     }
 
     // Retrieves signatures associated with a specific public key.
     // Utilizes `extractSignatures` to return an array of Signature structs.
     function getSignaturesByPublicKey(uint256[2] memory publicKey) public view returns (Signature[] memory) {
-        return extractSignatures(signatureIndicesByPublicKey[abi.encodePacked(publicKey[0], publicKey[1])]);
+        return extractSignatures(signatureIndicesByPublicKey[publicKey[0]][publicKey[1]]);
     }
 
     // Retrieves signatures associated with a specific new public key.
     // Utilizes `extractSignatures` to return an array of Signature structs.
     function getSignaturesByNewPublicKey(uint256[2] memory publicKey) public view returns (Signature[] memory) {
-        return extractSignatures(signatureIndicesByNewPublicKey[abi.encodePacked(publicKey[0], publicKey[1])]);
+        return extractSignatures(signatureIndicesByNewPublicKey[publicKey[0]][publicKey[1]]);
     }
 
     // Internal helper function to construct an array of Signature structs from an array of indices.

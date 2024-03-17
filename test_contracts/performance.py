@@ -23,6 +23,7 @@ def store_signatures_performance():
     max_num_of_ext_pubkeys = 40
     num_of_trials = 100
     i = 1
+    assert i > 0
     print("idx,time[s],gas")
     while i < max_num_of_ext_pubkeys:
         avg_time = 0
@@ -31,11 +32,7 @@ def store_signatures_performance():
             msg, signature = generate_random_nr_signature(i)
             assert len(signature.ring_public_keys) == i + 1
             start_time = time.time()
-            # try:
             receipt = client.store_signature(blockchain_priv_key, msg, signature)
-            # get signature
-            # except requests.exceptions.ReadTimeout as e:
-            #     break
             end_time = time.time()
             elapsed_time = end_time - start_time
             avg_time += elapsed_time
