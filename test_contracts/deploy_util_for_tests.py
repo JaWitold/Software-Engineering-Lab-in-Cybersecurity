@@ -39,10 +39,6 @@ def deploy_contract_for_tests(contract_name: str):
     :param contract_name: contract name that would be deployed
     "type contract_name: str
     """
-    deployed_contracts_file_path = os.path.join(os.getcwd(), "deployment", "deployed_contracts.json")
-    with open(deployed_contracts_file_path, "w", encoding="utf-8"):
-        pass
-
     account_idx = 0
     account_address, priv_key = get_account_address_and_priv_key(account_idx)
     assert _check_docker_container_exists(TEST_CONTAINER_NAME), f"Docker Ganache not launched {TEST_CONTAINER_NAME=}"
