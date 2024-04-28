@@ -7,7 +7,7 @@ contract SchnorrSignature is EllipticCurve {
 
     // Hash function used in the Schnorr signature scheme.
     // It takes a byte array as input and returns a hash value modulo the generator order.
-    function hash(bytes memory b) public pure returns (uint256) {
+    function hash(bytes memory b) internal pure returns (uint256) {
         return uint256(keccak256(b)) % GEN_ORDER;
     }
 
@@ -18,7 +18,7 @@ contract SchnorrSignature is EllipticCurve {
     // - R: value of the signature (elliptic curve point).
     // - s: value of the signature (scalar).
     // Returns true if the signature is valid, false otherwise.
-    function verifySignature(uint256 message, uint256[2] memory publicKey, uint256[2] memory R, uint256 s) public view returns (bool) {
+    function verifySignature(uint256 message, uint256[2] memory publicKey, uint256[2] memory R, uint256 s) internal view returns (bool) {
         // Calculate the hash of the concatenation of X, Y of the R value and the message.
         // This represents the challenge in the Schnorr signature scheme.
         uint256 h = hash(abi.encode(R[0], R[1], message));
@@ -31,5 +31,10 @@ contract SchnorrSignature is EllipticCurve {
         // Verify the Schnorr signature by checking the equality of s * G and X + h * A.
         // If they are equal, the signature is valid.
         return isEqual(multiply(G1, s), XhA);
+    }
+
+    // function only for testing
+    function testVerifySignature(uint256 message, uint256[2] memory publicKey, uint256[2] memory R, uint256 s) public view returns (bool) {
+        return verifySignature(message, publicKey, R, s);
     }
 }

@@ -52,7 +52,7 @@ def generate_random_nr_signature(num_of_pub_keys: int):
     priv_key = generate_random_scalar()
     while priv_key in priv_keys_list:
         priv_key = generate_random_scalar()
-    msg = 3123231342432
+    msg = generate_random_scalar()
     return msg, NodeRingSchnorrSignature.sign(msg, priv_key, pub_keys)
 
 
@@ -78,7 +78,7 @@ class TestContracts(unittest.TestCase):
         message = 123
         signature = SchnorrSignature.sign(message, privkey)
 
-        result = self.client.contract.functions.verifySignature(
+        result = self.client.contract.functions.testVerifySignature(
             message, convert_point_2d_to_list(pubkey), convert_point_2d_to_list(signature.r), signature.s
         ).call()
 
@@ -94,7 +94,7 @@ class TestContracts(unittest.TestCase):
         signature = SchnorrSignature.sign(message, privkey)
         signature.s += signature.s // 2
 
-        result = self.client.contract.functions.verifySignature(
+        result = self.client.contract.functions.testVerifySignature(
             message, convert_point_2d_to_list(pubkey), convert_point_2d_to_list(signature.r), signature.s
         ).call()
 
@@ -107,7 +107,7 @@ class TestContracts(unittest.TestCase):
         num_of_pub_keys = 10
         msg, signature = generate_random_nr_signature(num_of_pub_keys)
         arguments = convert_nr_sign_sigma_to_sol_arguments(signature)
-        result = self.client.contract.functions.verifyNodeRingSignature(msg, *arguments).call()
+        result = self.client.contract.functions.testVerifyNodeRingSignature(msg, *arguments).call()
 
         self.assertTrue(result, f"{CONTRACT_NAME} verification failed")
 

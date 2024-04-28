@@ -86,4 +86,17 @@ contract SignatureStorage is NodeRingSchnorrSignature {
         }
         return signatures;
     }
+
+    // function only for testing
+    function testVerifyNodeRingSignature(
+        uint256 message,
+        uint256[2] memory newPublicKey,
+        uint256[2][] memory Rs,
+        uint256[2][] memory RSigmas,
+        uint256[] memory sSigmas,
+        uint256 sum,
+        uint256[2][] memory publicKeys
+    ) public view returns (bool) {
+        return verifyNodeRingSignature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys);
+    }
 }

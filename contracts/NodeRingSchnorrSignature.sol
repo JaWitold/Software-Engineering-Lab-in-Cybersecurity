@@ -23,7 +23,7 @@ contract NodeRingSchnorrSignature is SchnorrSignature {
         uint256[] memory sSigmas,
         uint256 sum,
         uint256[2][] memory publicKeys
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         // Validation of input arrays to ensure they are of expected lengths.
         require(publicKeys.length > 0, "No public keys provided");
         require(publicKeys.length == RSigmas.length, "Mismatch in RSigmas and public keys count");
