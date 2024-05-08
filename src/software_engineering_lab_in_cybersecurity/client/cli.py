@@ -17,6 +17,9 @@ from software_engineering_lab_in_cybersecurity.client.client import BlockchainCl
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_ring_schnorr_signature import (
     NodeRingSchnorrSignature,
 )
+from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.schnorr_signature import (
+    SchnorrSignature,
+)
 from software_engineering_lab_in_cybersecurity.utility import (
     account_config,
     connection_config,
@@ -192,6 +195,16 @@ def main(args: List[str]) -> None:
                 "action": "store_true",
                 "help": "Flag to initiate creating signature.",
             },
+            "--register": {
+                "dest": "register",
+                "action": "store_true",
+                "help": "Flag to initiate registering public key.",
+            },
+            "--check-register": {
+                "dest": "check_register",
+                "action": "store_true",
+                "help": "Flag to verify if public key is registered.",
+            },
             "--message": {
                 "dest": "message",
                 "type": str,
@@ -233,17 +246,7 @@ def main(args: List[str]) -> None:
         _logger.info("Signature public key: %s", signature.signature_public_key)
     elif args.verify:
         # ask for signature public key (x, y)
-        signature_public_key = (
-            tuple(map(bn128_FQ, map(int, args.signature_public_key.split(","))))[0:2]
-            if args.signature_public_key and "," in args.signature_public_key
-            else select_public_key()
-        )
-
-        if len(signature_public_key) != 2:
-            _logger.error("Invalid public key provided: %s, expected (x, y)", args.signature_public_key)
-            sys.exit(1)
-
-        client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
+        client, signature_public_key = signature_pk(args)
         signatures = client.get_signatures_by_new_public_key(signature_public_key)
         print(type(signatures[0][0]), signatures)
         if len(signatures) == 0:
@@ -253,9 +256,50 @@ def main(args: List[str]) -> None:
         signature = signatures[0] if len(signatures) == 1 else select_signature(signatures)
 
         print("Verification result: %s", client.verify_signature(signature))
+    elif args.register:
+        accounts = load_accounts(_logger)["private_keys"]
+        message = int(args.message or get_input_with_prompt("Enter the message to sign"))
+        message_private_key = int(args.message_private_key or select_private_key(accounts, _logger), 16)
+        account_address, account_private_key = args.account_address, args.private_key
+        if not account_address or not account_private_key:
+            account_address, account_private_key = select_account_for_transaction(_logger)
+
+        signature = SchnorrSignature.sign(message, message_private_key)
+
+        client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
+        client.register(account_private_key, multiply(G1, message_private_key), message, signature.r, signature.s)
+
+        _logger.info("Registration of public key: %s", multiply(G1, message_private_key))
+    elif args.check_register:
+        # ask for signature public key (x, y)
+        client, signature_public_key = signature_pk(args)
+        is_registered = client.is_key_registered(signature_public_key)
+
+        if not is_registered:
+            _logger.error("Public key (%s) not registered", signature_public_key)
+            sys.exit(1)
+        _logger.info("Public key (%s) registered", signature_public_key)
     else:
         _logger.error("No operation specified. Use --sign <message> to sign or --verify to verify.")
         sys.exit(1)
+
+
+def signature_pk(args):
+    """
+    :param args: arguments parsed from the command line
+    :type args: any
+    :return: BlockchainClient and tuple[bn128_FQ, bn128_FQ]
+    """
+    signature_public_key = (
+        tuple(map(bn128_FQ, map(int, args.signature_public_key.split(","))))[0:2]
+        if args.signature_public_key and "," in args.signature_public_key
+        else select_public_key()
+    )
+    if len(signature_public_key) != 2:
+        _logger.error("Invalid public key provided: %s, expected (x, y)", args.signature_public_key)
+        sys.exit(1)
+    client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
+    return client, signature_public_key
 
 
 def run() -> None:
