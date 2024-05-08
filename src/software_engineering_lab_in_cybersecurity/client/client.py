@@ -78,7 +78,7 @@ class BlockchainClient(BlockchainBase):
         account = self.web3.eth.account.from_key(account_private_key)
         assert account is not None, "Failed to create account from provided private key."
 
-        contract_function = self.contract.functions.addSignatureAndRegister(
+        contract_function = self.contract.functions.addSignature(
             message,
             convert_point_2d_to_list(signature.signature_public_key),
             [convert_point_2d_to_list(rp) for rp in signature.random_points],
@@ -131,57 +131,3 @@ class BlockchainClient(BlockchainBase):
         :rtype: bool
         """
         return self.contract.functions.verifyHierarchicalSignature(*signature).call()
-
-    def register(
-        self, account_private_key: str, signature_public_key: Point2D[Field], message: int, r: Point2D[Field], s: int
-    ):
-        """
-        Registers a public key on the blockchain.
-
-        :param account_private_key: The private key associated with the account for signing the transaction.
-        :type account_private_key: str
-        :param signature_public_key: Public key to be registered.
-        :type signature_public_key: Point2D[Field]
-        :param message: The message to be verified.
-        :type message: int
-        :param r: Part of Schnorr signature to be verified.
-        :type r: Point2D[Field]
-        :param s: Part of Schnorr signature to be verified.
-        :type s: int
-        :return: Boolean indicating whether the registration is valid.
-        :rtype: bool
-        """
-        _logger.debug(
-            "signature: %s, %s, %s, %s",
-            message,
-            convert_point_2d_to_list(signature_public_key),
-            convert_point_2d_to_list(r),
-            s,
-        )
-        account = self.web3.eth.account.from_key(account_private_key)
-        assert account is not None, "Failed to create account from provided private key."
-
-        contract_function = self.contract.functions.registerKey(
-            message, convert_point_2d_to_list(signature_public_key), convert_point_2d_to_list(r), s
-        )
-
-        transaction_hash = self.prepare_transaction(contract_function, account, account_private_key)
-        receipt = self.wait_for_receipt(transaction_hash)
-
-        _logger.info("Block number: %s", receipt.blockNumber)
-        _logger.info("Gas used: %s", receipt.gasUsed)
-        _logger.debug("Block: %s", self.web3.eth.get_block(receipt.blockNumber))
-
-        return receipt
-
-    def is_key_registered(self, public_key: Point2D[Field]) -> bool:
-        """
-        Checks if public key is registered in the blockchain.
-
-        :param public_key: Public key to be checked.
-        :type public_key: Point2D[Field]
-        :return: Returns true if the public key is registered.
-        :rtype: bool
-        """
-        _logger.info("public key: %s", public_key)
-        return self.contract.functions.getStoredPublicKey(convert_point_2d_to_list(public_key)).call()
