@@ -1,10 +1,13 @@
 """Utility class for elliptic curves operations."""
 
-from random import randint
+from secrets import SystemRandom
 from typing import List
 
 from py_ecc.bn128 import curve_order
 from py_ecc.typing import Field, Point2D
+
+SEED = "TEST"
+RANDOM_GENERATOR = SystemRandom(SEED)
 
 
 def generate_random_scalar() -> int:
@@ -14,7 +17,7 @@ def generate_random_scalar() -> int:
     :return: A random integer between 1 and ``curve_order - 1``.
     :rtype: int
     """
-    return randint(1, curve_order - 1)
+    return RANDOM_GENERATOR.randint(1, curve_order - 1)
 
 
 def convert_point_2d_to_list(point: Point2D[Field]) -> List[int]:

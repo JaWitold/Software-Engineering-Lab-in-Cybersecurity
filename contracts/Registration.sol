@@ -13,7 +13,7 @@ contract Registration is HierarchicalVerification {
     // - s: value of the signature (scalar).
     // Returns true if the signature is valid, false otherwise.
     function registerKey(uint256[2] memory publicKey, uint256[2] memory R, uint256 s) external returns (bool) {
-        require(verifySignature(publicKey[0], publicKey, R, s));
+        require(verifySchnorrSignature(publicKey[0], publicKey, R, s));
         storedPublicKey[publicKey[0]][publicKey[1]] = true;
         return true;
     }

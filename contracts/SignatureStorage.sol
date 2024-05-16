@@ -45,7 +45,7 @@ contract SignatureStorage is NodeRingSchnorrSignature {
         uint256[] memory sSigmas,
         uint256 sum,
         uint256[2][] memory publicKeys
-    ) public {
+    ) internal {
         // Verification step to ensure the integrity and authenticity of the provided signature.
         require(verifyNodeRingSignature(message, newPublicKey, Rs, RSigmas, sSigmas, sum, publicKeys), "Invalid signature");
 
@@ -63,6 +63,12 @@ contract SignatureStorage is NodeRingSchnorrSignature {
 
         // Indexing the signature by the new public key.
         signatureIndicesByNewPublicKey[newPublicKey[0]][newPublicKey[1]].push(signatureIndex);
+    }
+
+    // Retrieves signature under index idx
+    function getSignatureByIdx(uint256 idx) public view returns (Signature memory) {
+        require(idx < storedSignatures.length, "Index exceeds number of signatures stored");
+        return storedSignatures[idx];
     }
 
     // Retrieves signatures associated with a specific public key.

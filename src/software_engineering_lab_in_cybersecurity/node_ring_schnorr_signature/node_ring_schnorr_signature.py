@@ -2,13 +2,13 @@
 This module implements the Node Ring Schnorr signature scheme using ...
 """
 
-import random
 from typing import List, Tuple
 
 from py_ecc.bn128 import G1, add, curve_order, eq, multiply, neg
 from py_ecc.typing import Field, Point2D
 
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.elliptic_curve import (
+    RANDOM_GENERATOR,
     convert_point_2d_to_list,
     generate_random_scalar,
     sum_coordinates,
@@ -172,7 +172,7 @@ class NodeRingSchnorrSignature:
         signature_random_points: List[Point2D[Field]],
         sub_signatures: List[SchnorrSignature],
     ):
-        index = random.randint(0, len(ring_public_keys))
+        index = RANDOM_GENERATOR.randint(0, len(ring_public_keys))
         signature_random_points.insert(index, master_randomness)
         sub_signatures.insert(index, master_sigma)
         ring_public_keys.insert(index, multiply(G1, master_private_key))

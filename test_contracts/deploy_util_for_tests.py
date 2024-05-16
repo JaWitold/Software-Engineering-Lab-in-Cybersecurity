@@ -9,6 +9,7 @@ TEST_IP = os.getenv("CONTRACT_IP", "127.0.0.1")
 TEST_PORT = os.getenv("CONTRACT_PORT", "8545")
 TEST_CHAIN_ID = os.getenv("CHAIN_ID", "1337")
 TEST_CONTAINER_NAME = os.getenv("CONTAINER_NAME", "ganache-container")
+CONTRACT_NAME = "ContractForTests"
 
 
 def _check_docker_container_exists(container_name):
@@ -32,17 +33,13 @@ def _chek_connection(host, port):
         return False
 
 
-def deploy_contract_for_tests(contract_name: str):
+def deploy_contract_for_tests(contract_name: str = CONTRACT_NAME):
     """
     Util function to deploy contract that should be tested
 
     :param contract_name: contract name that would be deployed
     "type contract_name: str
     """
-    deployed_contracts_file_path = os.path.join(os.getcwd(), "deployment", "deployed_contracts.json")
-    with open(deployed_contracts_file_path, "w", encoding="utf-8"):
-        pass
-
     account_idx = 0
     account_address, priv_key = get_account_address_and_priv_key(account_idx)
     assert _check_docker_container_exists(TEST_CONTAINER_NAME), f"Docker Ganache not launched {TEST_CONTAINER_NAME=}"
