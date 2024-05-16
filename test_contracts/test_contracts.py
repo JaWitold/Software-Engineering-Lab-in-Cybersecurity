@@ -1,7 +1,9 @@
+import copy
 import unittest
 
 import requests
 from deploy_util_for_tests import (
+    CONTRACT_NAME,
     TEST_CHAIN_ID,
     TEST_IP,
     TEST_PORT,
@@ -19,41 +21,28 @@ from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_
     multiply,
 )
 
-CONTRACT_NAME = "HierarchicalVerification"
 
-
-def convert_nr_sign_sigma_to_sol_arguments(signature: NodeRingSchnorrSignature):
+def generate_random_nr_signature(ring_size: int):
     """
-    Converts python data struct to such that solidity contract will handle
-
-    :param signature: node ring signature as python structure
-    "type signature: NodeRingSchnorrSignature
+    Simulate node ring signature with given number of ring size
     """
-    # pylint: disable=R0801
-    return (
-        convert_point_2d_to_list(signature.signature_public_key),
-        [convert_point_2d_to_list(rp) for rp in signature.random_points],
-        [convert_point_2d_to_list(sub_signature.r) for sub_signature in signature.sub_signatures],
-        [sub_signature.s for sub_signature in signature.sub_signatures],
-        signature.signature_sum,
-        [convert_point_2d_to_list(pk) for pk in signature.ring_public_keys],
-    )
+    priv_keys_list = [generate_random_scalar() for _ in range(ring_size - 1)]
+    pub_keys_list = [multiply(G1, priv_key) for priv_key in priv_keys_list]
+    pub_keys_list_copy = copy.deepcopy(pub_keys_list)
 
-
-def generate_random_nr_signature(num_of_pub_keys: int):
-    """
-    Simulate node ring signature with given number of public keys
-
-    :param num_of_pub_keys:
-    "type num_of_pub_keys: int
-    """
-    priv_keys_list = [generate_random_scalar() for _ in range(num_of_pub_keys)]
-    pub_keys = [multiply(G1, priv_key) for priv_key in priv_keys_list]
+    msg = generate_random_scalar()
     priv_key = generate_random_scalar()
     while priv_key in priv_keys_list:
         priv_key = generate_random_scalar()
-    msg = 3123231342432
-    return msg, NodeRingSchnorrSignature.sign(msg, priv_key, pub_keys)
+    signature = NodeRingSchnorrSignature.sign(msg, priv_key, pub_keys_list)
+
+    idx = 0
+    while len(pub_keys_list_copy) > idx and pub_keys_list_copy[idx] == signature.ring_public_keys[idx]:
+        idx += 1
+
+    priv_keys_list.insert(idx, priv_key)
+
+    return priv_keys_list, msg, signature
 
 
 class TestContracts(unittest.TestCase):
@@ -65,7 +54,7 @@ class TestContracts(unittest.TestCase):
         Method to deploy contract before testsuite
         """
         # Perform initialization or setup common to all test cases
-        contract_address = deploy_contract_for_tests(CONTRACT_NAME).contractAddress
+        contract_address = deploy_contract_for_tests().contractAddress
         cls.client = BlockchainClient(TEST_IP, TEST_PORT, TEST_CHAIN_ID, contract_address)
         _, cls.blockchain_priv_key = get_account_address_and_priv_key(2)
 
@@ -78,7 +67,7 @@ class TestContracts(unittest.TestCase):
         message = 123
         signature = SchnorrSignature.sign(message, privkey)
 
-        result = self.client.contract.functions.verifySignature(
+        result = self.client.contract.functions.testVerifySchnorrSignature(
             message, convert_point_2d_to_list(pubkey), convert_point_2d_to_list(signature.r), signature.s
         ).call()
 
@@ -94,7 +83,7 @@ class TestContracts(unittest.TestCase):
         signature = SchnorrSignature.sign(message, privkey)
         signature.s += signature.s // 2
 
-        result = self.client.contract.functions.verifySignature(
+        result = self.client.contract.functions.testVerifySchnorrSignature(
             message, convert_point_2d_to_list(pubkey), convert_point_2d_to_list(signature.r), signature.s
         ).call()
 
@@ -104,10 +93,10 @@ class TestContracts(unittest.TestCase):
         """
         Perform NodeRingSchnorr signature verification using the contract.
         """
-        num_of_pub_keys = 10
-        msg, signature = generate_random_nr_signature(num_of_pub_keys)
-        arguments = convert_nr_sign_sigma_to_sol_arguments(signature)
-        result = self.client.contract.functions.verifyNodeRingSignature(msg, *arguments).call()
+        ring_size = 10
+        _, msg, signature = generate_random_nr_signature(ring_size)
+        arguments = self.client.convert_nr_sign_sigma_to_sol_arguments(signature)
+        result = self.client.contract.functions.testVerifyNodeRingSignature(msg, *arguments).call()
 
         self.assertTrue(result, f"{CONTRACT_NAME} verification failed")
 
@@ -115,10 +104,20 @@ class TestContracts(unittest.TestCase):
         """
         Store signature on blockchain using the contract.
         """
-        msg, signature = generate_random_nr_signature(3)
+        # pylint: disable=R0914
+        ring_size = 4
+        priv_keys_list, msg, signature = generate_random_nr_signature(ring_size)
         prev_block_num = self.client.web3.eth.block_number
-        # store signature
+
+        # register keys
         exception = None
+        for priv_key, pub_key in zip(priv_keys_list, signature.ring_public_keys):
+            try:
+                sigma = SchnorrSignature.sign(convert_point_2d_to_list(pub_key)[0], priv_key)
+                receipt = self.client.register(self.blockchain_priv_key, pub_key, sigma.r, sigma.s)
+            except requests.exceptions.ReadTimeout as e:
+                exception = e
+
         try:
             receipt = self.client.store_signature(self.blockchain_priv_key, msg, signature)
             curr_block_num = receipt.blockNumber
@@ -131,6 +130,10 @@ class TestContracts(unittest.TestCase):
         signatures_list = self.client.get_signatures_by_new_public_key(signature.signature_public_key)
         print(signatures_list)
         self.assertTrue(signatures_list is not None and len(signatures_list) > 0, "Signatures list empty")
+
+        signature_by_idx = self.client.get_signatures_by_idx(0)
+        print(signature_by_idx)
+        self.assertTrue(signature_by_idx is not None)
 
         hier_verify_result = self.client.verify_signature(signatures_list[0])
         self.assertTrue(hier_verify_result, "Hier verify failed")

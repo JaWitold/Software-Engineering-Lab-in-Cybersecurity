@@ -23,7 +23,7 @@ contract NodeRingSchnorrSignature is SchnorrSignature {
         uint256[] memory sSigmas,
         uint256 sum,
         uint256[2][] memory publicKeys
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         // Validation of input arrays to ensure they are of expected lengths.
         require(publicKeys.length > 0, "No public keys provided");
         require(publicKeys.length == RSigmas.length, "Mismatch in RSigmas and public keys count");
@@ -39,7 +39,7 @@ contract NodeRingSchnorrSignature is SchnorrSignature {
         for (uint i = 0; i < publicKeys.length; i++) {
             // Verifies each sub-signature by checking if the given sSigma generates the expected RSigma when combined with the message and public key.
             // This ensures that each signer's part of the signature is valid.
-            subSignatureVerified = subSignatureVerified && verifySignature(Rs[i][0] + Rs[i][1], newPublicKey, RSigmas[i], sSigmas[i]);
+            subSignatureVerified = subSignatureVerified && verifySchnorrSignature(Rs[i][0] + Rs[i][1], newPublicKey, RSigmas[i], sSigmas[i]);
 
             // Compute hash of the message combined with the R and RSigma values, and the sSigma for this iteration.
             // This hash represents a unique challenge for each signer's contribution.

@@ -9,6 +9,7 @@ from typing import Any, List, Tuple
 
 from py_ecc.typing import Field, Point2D
 from web3.contract import Contract
+from web3.types import TxReceipt
 
 from software_engineering_lab_in_cybersecurity.blockchain_base import BlockchainBase
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.elliptic_curve import (
@@ -61,7 +62,23 @@ class BlockchainClient(BlockchainBase):
             data = json.load(file)
         return self.web3.eth.contract(address=contract_address, abi=data[contract_address]["abi"])
 
-    def store_signature(self, account_private_key: str, message: int, signature: NodeRingSchnorrSignature) -> None:
+    def convert_nr_sign_sigma_to_sol_arguments(self, signature: NodeRingSchnorrSignature):
+        """
+        Converts python data struct to such that solidity contract will handle
+
+        :param signature: node ring signature as python structure
+        "type signature: NodeRingSchnorrSignature
+        """
+        return (
+            convert_point_2d_to_list(signature.signature_public_key),
+            [convert_point_2d_to_list(rp) for rp in signature.random_points],
+            [convert_point_2d_to_list(sub_signature.r) for sub_signature in signature.sub_signatures],
+            [sub_signature.s for sub_signature in signature.sub_signatures],
+            signature.signature_sum,
+            [convert_point_2d_to_list(pk) for pk in signature.ring_public_keys],
+        )
+
+    def store_signature(self, account_private_key: str, message: int, signature: NodeRingSchnorrSignature) -> TxReceipt:
         """
         Store a signature on the blockchain.
 
@@ -79,13 +96,7 @@ class BlockchainClient(BlockchainBase):
         assert account is not None, "Failed to create account from provided private key."
 
         contract_function = self.contract.functions.addSignatureAndRegister(
-            message,
-            convert_point_2d_to_list(signature.signature_public_key),
-            [convert_point_2d_to_list(rp) for rp in signature.random_points],
-            [convert_point_2d_to_list(sub_signature.r) for sub_signature in signature.sub_signatures],
-            [sub_signature.s for sub_signature in signature.sub_signatures],
-            signature.signature_sum,
-            [convert_point_2d_to_list(pk) for pk in signature.ring_public_keys],
+            message, *self.convert_nr_sign_sigma_to_sol_arguments(signature)
         )
 
         transaction_hash = self.prepare_transaction(contract_function, account, account_private_key)
@@ -96,6 +107,17 @@ class BlockchainClient(BlockchainBase):
         _logger.debug("Block: %s", self.web3.eth.get_block(receipt.blockNumber))
 
         return receipt
+
+    def get_signatures_by_idx(self, idx: int) -> List[Tuple[Any]]:
+        """
+        Retrieves signatures associated under given index.
+
+        :param idx: idx of signature to retrieve
+        :type idx: int
+        :return: signature
+        :rtype: Tuple[Any]
+        """
+        return self.contract.functions.getSignatureByIdx(idx).call()
 
     def get_signatures_by_new_public_key(self, signature_public_key: Point2D[Field]) -> List[Tuple[Any]]:
         """
@@ -132,7 +154,9 @@ class BlockchainClient(BlockchainBase):
         """
         return self.contract.functions.verifyHierarchicalSignature(*signature).call()
 
-    def register(self, account_private_key: str, signature_public_key: Point2D[Field], r: Point2D[Field], s: int):
+    def register(
+        self, account_private_key: str, signature_public_key: Point2D[Field], r: Point2D[Field], s: int
+    ) -> TxReceipt:
         """
         Registers a public key on the blockchain.
 
