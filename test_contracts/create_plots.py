@@ -54,7 +54,7 @@ def plot_full_tree_test(df, dir_for_plots: str):
         for i, test_type_name in enumerate([test_type.name for test_type in TestType]):
             test_type_data = df["_".join([test_type_name, attribute_name])]
             plt.bar(x + i * bar_width, test_type_data, bar_width, label=test_type_name)
-        plt.xticks(x+bar_width, df["X_AXIS"])
+        plt.xticks(x + bar_width, df["X_AXIS"])
         plt.xlabel("RING_SIZE * HEIGHT_OF_TREE")
         plt.ylabel(attribute_name)
         plt.title(attribute_name + " vs RING_SIZE * HEIGHT_OF_TREE")
