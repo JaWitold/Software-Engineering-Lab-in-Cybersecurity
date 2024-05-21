@@ -62,9 +62,21 @@ class Attribute(Enum):
     """
 
     ADDING_GAS = 0
-    VERIFY_GAS = 1
+    VERIFYING_GAS = 1
     BLOCK_SIZE = 2
     SIGNING_TIME = 3
+
+    def label_str(self):
+        """
+        Function that is used for plots' labels
+        """
+        attributes_strs = {
+            Attribute.ADDING_GAS: "Gas usage for adding signature",
+            Attribute.VERIFYING_GAS: "Gas usage for verifying signature",
+            Attribute.BLOCK_SIZE: "Block size [bytes]",
+            Attribute.SIGNING_TIME: "Duration [s] of signature creation",
+        }
+        return attributes_strs.get(self, "Unknown attribute")
 
 
 def _chunked(iterable, size):
@@ -115,7 +127,7 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
             gas_estimate = client.contract.functions.testVerifyNodeRingSignature(
                 message, *arguments_to_verify
             ).estimate_gas()
-            results[Attribute.VERIFY_GAS.value] += gas_estimate
+            results[Attribute.VERIFYING_GAS.value] += gas_estimate
 
         latest_block_number = client.web3.eth.block_number
         start_block_number = latest_block_number - num_of_trials + 1
@@ -191,7 +203,7 @@ def full_tree_test(
             # single
             results[TestType.SINGLE.value][Attribute.SIGNING_TIME.value] += elapsed_time
             results[TestType.SINGLE.value][Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-            results[TestType.SINGLE.value][Attribute.VERIFY_GAS.value] += gas_estimate
+            results[TestType.SINGLE.value][Attribute.VERIFYING_GAS.value] += gas_estimate
 
             # path
             if is_first_chunk:
@@ -200,7 +212,7 @@ def full_tree_test(
                 results[TestType.PATH.value][Attribute.BLOCK_SIZE.value] += block.size
                 results[TestType.PATH.value][Attribute.SIGNING_TIME.value] += elapsed_time
                 results[TestType.PATH.value][Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-                results[TestType.PATH.value][Attribute.VERIFY_GAS.value] += gas_estimate
+                results[TestType.PATH.value][Attribute.VERIFYING_GAS.value] += gas_estimate
 
             is_first_chunk = False
         # After whole tree generation
@@ -255,7 +267,7 @@ def equivalent_test(results: list, num_of_initial_pub_keys: int, blockchain_priv
     # equivalent
     results[TestType.EQUIVALENT.value][Attribute.SIGNING_TIME.value] += elapsed_time
     results[TestType.EQUIVALENT.value][Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-    results[TestType.EQUIVALENT.value][Attribute.VERIFY_GAS.value] += gas_estimate
+    results[TestType.EQUIVALENT.value][Attribute.VERIFYING_GAS.value] += gas_estimate
     results[TestType.EQUIVALENT.value][Attribute.BLOCK_SIZE.value] += block.size
 
 

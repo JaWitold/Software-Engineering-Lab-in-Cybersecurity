@@ -1,14 +1,9 @@
-import argparse
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from test_performance import Attribute, TestType
-
-SMALL_SIZE = 12
-MEDIUM_SIZE = 14
-BIGGER_SIZE = 18
 
 
 def setup_figure():
@@ -19,14 +14,21 @@ def setup_figure():
     (font, axes title, labels, tick labels, figure title) and sets up a grid.
 
     """
-    plt.rc("font", size=SMALL_SIZE)  # controls default text sizes
-    plt.rc("axes", titlesize=SMALL_SIZE)  # fontsize of the axes title
-    plt.rc("axes", labelsize=MEDIUM_SIZE)  # fontsize of the x and y labels
-    plt.rc("xtick", labelsize=SMALL_SIZE)  # fontsize of the tick labels
-    plt.rc("ytick", labelsize=SMALL_SIZE)  # fontsize of the tick labels
-    # plt.rc('legend', fontsize=MEDIUM_SIZE)   # legend fontsize
-    plt.rc("figure", titlesize=BIGGER_SIZE)  # fontsize of the figure title
-    plt.figure(figsize=(10, 7))
+    small_size = 10
+    medium_size = 12
+    bigger_size = 14
+    fig_width = 6  # Width in inches for a two-column layout
+    fig_height = 5  # Height in inches for a two-column layout
+
+    plt.rc("font", size=small_size)  # controls default text sizes
+    plt.rc("axes", titlesize=small_size)  # fontsize of the axes title
+    plt.rc("axes", labelsize=medium_size)  # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=small_size)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=small_size)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=small_size)  # legend fontsize
+    plt.rc("figure", titlesize=bigger_size)  # fontsize of the figure title
+
+    plt.figure(figsize=(fig_width, fig_height))
     plt.grid(True)
 
 
@@ -45,24 +47,24 @@ def plot_full_tree_test(df, dir_for_plots: str):
     :type dir_for_plots: str
 
     """
-    df["X_AXIS"] = df["RING_SIZE"].astype(str) + "*" + df["TREE_HEIGHT"].astype(str)
+    df["X_AXIS"] = df["RING_SIZE"].astype(str) + " ^ " + df["TREE_HEIGHT"].astype(str)
     x = np.arange(len(df["X_AXIS"]))  # the label locations
     bar_width = 0.2  # width of the bars
-    for attribute_name in [attribute.name for attribute in Attribute]:
+    for attribute in Attribute:
         setup_figure()
         plt.grid(False)
-        for i, test_type_name in enumerate([test_type.name for test_type in TestType]):
-            test_type_data = df["_".join([test_type_name, attribute_name])]
-            plt.bar(x + i * bar_width, test_type_data, bar_width, label=test_type_name)
+        for i, test_type in enumerate(TestType):
+            test_type_data = df["_".join([test_type.name, attribute.name])]
+            plt.bar(x + i * bar_width, test_type_data, bar_width, label=test_type.name)
         plt.xticks(x + bar_width, df["X_AXIS"])
-        plt.xlabel("RING_SIZE * HEIGHT_OF_TREE")
-        plt.ylabel(attribute_name)
-        plt.title(attribute_name + " vs RING_SIZE * HEIGHT_OF_TREE")
+        plt.xlabel("ring size ^ tree height")
+        plt.ylabel(attribute.label_str())
+        # plt.title(attribute.label_str() + " vs ring size ^ tree height")
         plt.legend()
-        filename = os.path.join(dir_for_plots, "full_tree_" + attribute_name.lower() + ".pdf")
+        plt.tight_layout()
+        filename = os.path.join(dir_for_plots, "full_tree_" + attribute.name.lower() + ".pdf")
         plt.savefig(filename, dpi=300)
         plt.close()
-    print(f"Plots saved to {dir_for_plots} directory.")
 
 
 def plot_storing_vs_verifying(df, dir_for_plots: str):
@@ -80,20 +82,24 @@ def plot_storing_vs_verifying(df, dir_for_plots: str):
     :type dir_for_plots: str
 
     """
+    mean_multiplicity = (df[Attribute.ADDING_GAS.name] / df[Attribute.VERIFYING_GAS.name]).mean().mean()
+    print(f"{Attribute.ADDING_GAS.name} / {Attribute.VERIFYING_GAS.name} mean =  {mean_multiplicity}")
+
+    # Gas usage
     setup_figure()
     x_label = "RING_SIZE"
     plt.plot(
-        df[x_label], df[Attribute.ADDING_GAS.name], marker="o", linestyle="-", color="b", label="gas used for adding"
+        df[x_label], df[Attribute.ADDING_GAS.name], marker="o", linestyle="-", color="b", label="adding single node"
     )
     plt.plot(
         df[x_label],
-        df[Attribute.VERIFY_GAS.name],
+        df[Attribute.VERIFYING_GAS.name],
         marker="+",
         linestyle="--",
         color="r",
-        label="gas used for verification only",
+        label="verification only",
     )
-    plt.title("Gas usage vs Size of a ring", fontsize=BIGGER_SIZE)
+    # plt.title("Gas usage vs Size of a ring")
     plt.xlabel("Size of a ring")
     plt.ylabel("Gas usage")
     plt.legend()
@@ -102,49 +108,33 @@ def plot_storing_vs_verifying(df, dir_for_plots: str):
     plt.savefig(filename, dpi=300)
     plt.close()
 
+    # Block size
     setup_figure()
     plt.plot(
         df[x_label], df[Attribute.BLOCK_SIZE.name], marker="o", linestyle="-", color="b", label="block size [bytes]"
     )
-    plt.title("Block size [bytes] vs Size of a ring", fontsize=BIGGER_SIZE)
+    # plt.title("Block size [bytes] vs Size of a ring")
+    plt.xlabel("Size of a ring")
     plt.ylabel("Block size [bytes]")
-    plt.legend()
+    # plt.legend()
     plt.tight_layout()
     filename = os.path.join(dir_for_plots, "storing_vs_verifying_" + Attribute.BLOCK_SIZE.name.lower() + ".pdf")
     plt.savefig(filename, dpi=300)
     plt.close()
 
 
-def parse_arguments():
-    """
-    Parse command line arguments for the script.
-
-    This function sets up argument parsing for the script, including options for specifying
-    the test type (full_tree or storing_vs_verifying).
-
-    :returns: Parsed command line arguments.
-    :rtype: argparse.Namespace
-    """
-    parser = argparse.ArgumentParser(description="Process command line arguments")
-    parser.add_argument(
-        "--test_type", choices=["full_tree", "storing_vs_verifying"], help="Specify the test type (tree or storage)"
-    )
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    args = parse_arguments()
+    test_types = ["full_tree", "storing_vs_verifying"]
+    plot_functions_list = [plot_full_tree_test, plot_storing_vs_verifying]
     current_directory = os.path.dirname(os.path.realpath(__file__))
     results_dir = os.path.join(current_directory, "results")
-    csv_filename = os.path.join(results_dir, "csv_files", args.test_type + ".csv")
-    df = pd.read_csv(csv_filename)
+    csv_filenames_list = [os.path.join(results_dir, "csv_files", test_type + ".csv") for test_type in test_types]
     dir_for_plots = os.path.join(results_dir, "plots")
-    test_type = args.test_type
-    print("Test Type:", test_type)
 
-    if args.test_type == "full_tree":
-        plot_full_tree_test(df, dir_for_plots)
-    elif args.test_type == "storing_vs_verifying":
-        plot_storing_vs_verifying(df, dir_for_plots)
-    else:
-        print("Wrong test type!")
+    for i, csv_filename in enumerate(csv_filenames_list):
+        if os.path.exists(csv_filename):
+            df = pd.read_csv(csv_filename)
+            plot_functions_list[i](df, dir_for_plots)
+            print(f"Plots saved to {dir_for_plots} directory with prefix: {test_types[i]}")
+        else:
+            print(csv_filename, "doesn't exists")
