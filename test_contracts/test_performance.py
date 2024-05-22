@@ -92,7 +92,7 @@ def _chunked(iterable, size):
     :rtype: generator
     """
     for i in range(0, len(iterable), size):
-        yield iterable[i: i + size]
+        yield iterable[i : i + size]
 
 
 def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
@@ -118,8 +118,7 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
             priv_keys_list, pub_keys_keys_list = generate_and_register_keys(blockchain_priv_key, client, curr_ring_size)
             signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
             message = generate_random_scalar()
-            signature = NodeRingSchnorrSignature.sign(
-                message, signing_priv_key, pub_keys_keys_list)[1]
+            signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)[1]
 
             # action on blockchain
             receipt_add = client.store_signature(blockchain_priv_key, message, signature)
@@ -191,7 +190,8 @@ def full_tree_test(
             message = generate_random_scalar()
             start_time = time.time()
             next_lvl_signature_private_key, signature = NodeRingSchnorrSignature.sign(
-                message, curr_lvl_signature_priv_key, pub_keys_chunk)
+                message, curr_lvl_signature_priv_key, pub_keys_chunk
+            )
             end_time = time.time()
             elapsed_time = end_time - start_time
             priv_keys_list_for_next_lvl.append(next_lvl_signature_private_key)

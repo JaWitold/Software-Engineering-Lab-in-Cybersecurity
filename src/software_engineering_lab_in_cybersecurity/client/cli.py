@@ -71,7 +71,7 @@ def select_private_key(accounts: Dict[str, str], logger: logging.Logger) -> str:
 
     if selection.startswith(custom_prefix):
         # If the selection starts with 'custom:', strip the prefix and return the rest as the private key
-        return selection[len(custom_prefix):].strip()
+        return selection[len(custom_prefix) :].strip()
     if selection.isdigit() and 1 <= int(selection) <= len(accounts):
         # If the selection is a digit within the range of account numbers, select the corresponding private key
         selected_index = int(selection) - 1

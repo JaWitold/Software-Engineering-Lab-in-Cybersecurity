@@ -47,7 +47,7 @@ def plot_full_tree_test(df, dir_for_plots: str):
     :type dir_for_plots: str
 
     """
-    
+
     df["X_AXIS"] = "(" + df["RING_SIZE"].astype(str) + ", " + df["TREE_HEIGHT"].astype(str) + ")"
     x = np.arange(len(df["X_AXIS"]))  # the label locations
     bar_width = 0.2  # width of the bars
