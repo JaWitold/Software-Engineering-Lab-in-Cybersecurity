@@ -71,7 +71,7 @@ def select_private_key(accounts: Dict[str, str], logger: logging.Logger) -> str:
 
     if selection.startswith(custom_prefix):
         # If the selection starts with 'custom:', strip the prefix and return the rest as the private key
-        return selection[len(custom_prefix) :].strip()
+        return selection[len(custom_prefix):].strip()
     if selection.isdigit() and 1 <= int(selection) <= len(accounts):
         # If the selection is a digit within the range of account numbers, select the corresponding private key
         selected_index = int(selection) - 1
@@ -238,11 +238,12 @@ def main(args: List[str]) -> None:
             account_address, account_private_key = select_account_for_transaction(_logger)
 
         public_keys_ring = select_public_keys_ring(accounts, account_address)
-        signature = NodeRingSchnorrSignature.sign(message, message_private_key, public_keys_ring)
+        signature_private_key, signature = NodeRingSchnorrSignature.sign(message, message_private_key, public_keys_ring)
 
         client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
         client.store_signature(account_private_key, message, signature)
 
+        _logger.info("Signature private key: %s", signature_private_key)
         _logger.info("Signature public key: %s", signature.signature_public_key)
     elif args.verify:
         # ask for signature public key (x, y)

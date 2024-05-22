@@ -91,7 +91,7 @@ class TestContracts(unittest.TestCase):
         priv_keys_list, pub_keys_keys_list = _gen_rand_keys(ring_size)
         signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
         message = generate_random_scalar()
-        signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)
+        signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)[1]
         arguments = self.client.convert_nr_sign_sigma_to_sol_arguments(signature)
         result = self.client.contract.functions.testVerifyNodeRingSignature(message, *arguments).call()
         self.assertTrue(result, "verification failed")
@@ -106,7 +106,7 @@ class TestContracts(unittest.TestCase):
         )
         signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
         message = generate_random_scalar()
-        signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)
+        signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)[1]
         prev_block_num = self.client.web3.eth.block_number
 
         exception = None

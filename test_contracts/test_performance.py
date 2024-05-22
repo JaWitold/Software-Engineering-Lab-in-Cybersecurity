@@ -92,7 +92,7 @@ def _chunked(iterable, size):
     :rtype: generator
     """
     for i in range(0, len(iterable), size):
-        yield iterable[i : i + size]
+        yield iterable[i: i + size]
 
 
 def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
@@ -118,7 +118,8 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
             priv_keys_list, pub_keys_keys_list = generate_and_register_keys(blockchain_priv_key, client, curr_ring_size)
             signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
             message = generate_random_scalar()
-            signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)
+            signature = NodeRingSchnorrSignature.sign(
+                message, signing_priv_key, pub_keys_keys_list)[1]
 
             # action on blockchain
             receipt_add = client.store_signature(blockchain_priv_key, message, signature)
@@ -170,6 +171,7 @@ def full_tree_test(
     :returns: A list of results for different test types and attributes.
     :rtype: list[list[float]]
     """
+    num_of_added_nodes = 0
     num_of_all_nodes = num_of_initial_pub_keys - 1
     results = [[0 for _ in range(len(Attribute))] for _ in range(len(TestType))]
     all_priv_keys_list, all_pub_keys_list = generate_and_register_keys(
@@ -184,13 +186,15 @@ def full_tree_test(
             _chunked(priv_keys_list, ring_size), _chunked(pub_keys_keys_list, ring_size)
         ):
             idx_to_use = 0 if is_first_chunk else random.randint(0, len(priv_keys_chunk) - 1)
-            signing_priv_key, _ = priv_keys_chunk.pop(idx_to_use), pub_keys_chunk.pop(idx_to_use)
+            curr_lvl_signature_priv_key = priv_keys_chunk.pop(idx_to_use)
+            pub_keys_chunk.pop(idx_to_use)
             message = generate_random_scalar()
             start_time = time.time()
-            signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_chunk)
+            next_lvl_signature_private_key, signature = NodeRingSchnorrSignature.sign(
+                message, curr_lvl_signature_priv_key, pub_keys_chunk)
             end_time = time.time()
             elapsed_time = end_time - start_time
-            priv_keys_list_for_next_lvl.append(signing_priv_key)
+            priv_keys_list_for_next_lvl.append(next_lvl_signature_private_key)
             pub_keys_list_for_next_lvl.append(signature.signature_public_key)
 
             # action on blockchain
@@ -215,16 +219,18 @@ def full_tree_test(
                 results[TestType.PATH.value][Attribute.VERIFYING_GAS.value] += gas_estimate
 
             is_first_chunk = False
+            num_of_added_nodes += 1
         # After whole tree generation
         # Calculate average block size
         priv_keys_list, pub_keys_keys_list = priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl
         num_of_signatures_on_next_lvl = ring_size ** (lvl - 1)
         assert (
             len(priv_keys_list_for_next_lvl) == num_of_signatures_on_next_lvl
-        ), f"{len(priv_keys_list_for_next_lvl)}, {num_of_signatures_on_next_lvl}"
+        ), f"{len(priv_keys_list_for_next_lvl)=} != {num_of_signatures_on_next_lvl=}"
 
+    assert num_of_added_nodes == num_of_all_nodes, f"{num_of_added_nodes=} != {num_of_all_nodes=}"
     latest_block_number = client.web3.eth.block_number
-    start_block_number = latest_block_number - num_of_all_nodes + 1
+    start_block_number = latest_block_number - num_of_added_nodes + 1
     for block_number in range(start_block_number, latest_block_number + 1):
         block = client.web3.eth.get_block(block_number)
         results[TestType.SINGLE.value][Attribute.BLOCK_SIZE.value] += block.size
@@ -255,7 +261,7 @@ def equivalent_test(results: list, num_of_initial_pub_keys: int, blockchain_priv
     signing_priv_key, _ = priv_keys_list.pop(0), pub_keys_list.pop(0)
     message = generate_random_scalar()
     start_time = time.time()
-    signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)
+    signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
     end_time = time.time()
     elapsed_time = end_time - start_time
 
