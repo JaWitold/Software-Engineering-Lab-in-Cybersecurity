@@ -20,6 +20,15 @@ def _gen_rand_keys(num_of_keys: int):
     return priv_keys_list, pub_keys_list
 
 
+def register_keys(blockchain_priv_key: str, client: BlockchainClient, priv_keys_list: list, pub_keys_list: list):
+    """
+    Function that registers given keys using given blockchain client
+    """
+    for priv_key, pub_key in zip(priv_keys_list, pub_keys_list):
+        sigma = SchnorrSignature.sign(convert_point_2d_to_list(pub_key)[0], priv_key)
+        client.register(blockchain_priv_key, pub_key, sigma.r, sigma.s)
+
+
 def generate_and_register_keys(blockchain_priv_key: str, client: BlockchainClient, num_of_keys: int):
     """
     Generate random private keys and their corresponding public keys, and register them on the blockchain.
@@ -39,9 +48,7 @@ def generate_and_register_keys(blockchain_priv_key: str, client: BlockchainClien
     :returns: None
     """
     priv_keys_list, pub_keys_list = _gen_rand_keys(num_of_keys)
-    for priv_key, pub_key in zip(priv_keys_list, pub_keys_list):
-        sigma = SchnorrSignature.sign(convert_point_2d_to_list(pub_key)[0], priv_key)
-        client.register(blockchain_priv_key, pub_key, sigma.r, sigma.s)
+    register_keys(blockchain_priv_key, client, priv_keys_list, pub_keys_list)
     return priv_keys_list, pub_keys_list
 
 

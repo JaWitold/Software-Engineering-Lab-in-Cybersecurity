@@ -58,7 +58,7 @@ def plot_full_tree_test(df, dir_for_plots: str):
             test_type_data = df["_".join([test_type.name, attribute.name])]
             plt.bar(x + i * bar_width, test_type_data, bar_width, label=test_type.name)
         plt.xticks(x + bar_width, df["X_AXIS"])
-        plt.xlabel("ring size ^ tree height")
+        plt.xlabel("(ring size, tree height)")
         plt.ylabel(attribute.label_str())
         # plt.title(attribute.label_str() + " vs ring size ^ tree height")
         plt.legend()

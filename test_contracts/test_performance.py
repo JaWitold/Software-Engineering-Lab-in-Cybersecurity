@@ -13,7 +13,7 @@ from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_
     NodeRingSchnorrSignature,
     generate_random_scalar,
 )
-from test_contracts import generate_and_register_keys
+from test_contracts import generate_and_register_keys, register_keys
 
 
 class Tee:
@@ -115,10 +115,10 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
     for curr_ring_size in range(1, max_ring_size + 1):
         for _ in range(num_of_trials):
             # python generation part
-            priv_keys_list, pub_keys_keys_list = generate_and_register_keys(blockchain_priv_key, client, curr_ring_size)
-            signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
+            priv_keys_list, pub_keys_list = generate_and_register_keys(blockchain_priv_key, client, curr_ring_size)
+            signing_priv_key, _ = priv_keys_list.pop(), pub_keys_list.pop()
             message = generate_random_scalar()
-            signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)[1]
+            signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
 
             # action on blockchain
             receipt_add = client.store_signature(blockchain_priv_key, message, signature)
@@ -143,8 +143,9 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
 
 def full_tree_test(
     ring_size: int,
-    height_of_tree: int,
-    num_of_initial_pub_keys: int,
+    tree_height: int,
+    all_priv_keys_list: list[int],
+    all_pub_keys_list: list,
     blockchain_priv_key: str,
     client: BlockchainClient,
 ):
@@ -155,11 +156,16 @@ def full_tree_test(
     :param ring_size: The ring size for each level of the tree.
     :type ring_size: int
 
-    :param height_of_tree: The height of the tree (excluding the root node).
-    :type height_of_tree: int
+    :param tree_height: The height of the tree (defined as the number of edges
+        from the leaf node to the root node)
+    :type tree_height: int
 
-    :param num_of_initial_pub_keys: The number of initial public keys.
-    :type num_of_initial_pub_keys: int
+    :param all_priv_keys_list: List of the private keys for which
+        the public keys have been registered.
+    :type all_priv_keys_list: list
+
+    :param all_pub_keys_list: List of registered public keys.
+    :type all_pub_keys_list: list
 
     :param blockchain_priv_key: The private key of the blockchain account.
     :type blockchain_priv_key: str
@@ -171,18 +177,14 @@ def full_tree_test(
     :rtype: list[list[float]]
     """
     num_of_added_nodes = 0
-    num_of_all_nodes = num_of_initial_pub_keys - 1
+    num_of_all_nodes = (ring_size ** (tree_height + 1) - 1) / (ring_size - 1)
     results = [[0 for _ in range(len(Attribute))] for _ in range(len(TestType))]
-    all_priv_keys_list, all_pub_keys_list = generate_and_register_keys(
-        blockchain_priv_key, client, num_of_initial_pub_keys
-    )
-    priv_keys_list, pub_keys_keys_list = all_priv_keys_list, all_pub_keys_list
 
-    for lvl in range(height_of_tree, 0, -1):
+    for lvl in range(tree_height + 1, 0, -1):  # +1 bcs edge-based definiton of height is used
         priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl = [], []
         is_first_chunk = True
         for priv_keys_chunk, pub_keys_chunk in zip(
-            _chunked(priv_keys_list, ring_size), _chunked(pub_keys_keys_list, ring_size)
+            _chunked(all_priv_keys_list, ring_size), _chunked(all_pub_keys_list, ring_size)
         ):
             idx_to_use = 0 if is_first_chunk else random.randint(0, len(priv_keys_chunk) - 1)
             curr_lvl_signature_priv_key = priv_keys_chunk.pop(idx_to_use)
@@ -222,7 +224,7 @@ def full_tree_test(
             num_of_added_nodes += 1
         # After whole tree generation
         # Calculate average block size
-        priv_keys_list, pub_keys_keys_list = priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl
+        all_priv_keys_list, all_pub_keys_list = priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl
         num_of_signatures_on_next_lvl = ring_size ** (lvl - 1)
         assert (
             len(priv_keys_list_for_next_lvl) == num_of_signatures_on_next_lvl
@@ -236,11 +238,16 @@ def full_tree_test(
         results[TestType.SINGLE.value][Attribute.BLOCK_SIZE.value] += block.size
 
     results[TestType.SINGLE.value] = [value / num_of_all_nodes for value in results[TestType.SINGLE.value]]
-    assert len(all_priv_keys_list) == num_of_initial_pub_keys, f"{len(all_priv_keys_list)=}"
     return results
 
 
-def equivalent_test(results: list, num_of_initial_pub_keys: int, blockchain_priv_key: str, client: BlockchainClient):
+def equivalent_test(
+    results: list,
+    all_priv_keys_list: list[int],
+    all_pub_keys_list: list,
+    blockchain_priv_key: str,
+    client: BlockchainClient,
+):
     # pylint: disable=R0914
     """
     Test the performance of an equivalent signature process on the blockchain.
@@ -248,8 +255,12 @@ def equivalent_test(results: list, num_of_initial_pub_keys: int, blockchain_priv
     :param results: The list to store the test results.
     :type results: list
 
-    :param num_of_initial_pub_keys: The number of initial public keys.
-    :type num_of_initial_pub_keys: int
+    :param all_priv_keys_list: List of the private keys for which
+        the public keys have been registered.
+    :type all_priv_keys_list: list
+
+    :param all_pub_keys_list: List of registered public keys.
+    :type all_pub_keys_list: list
 
     :param blockchain_priv_key: The private key of the blockchain account.
     :type blockchain_priv_key: str
@@ -257,11 +268,10 @@ def equivalent_test(results: list, num_of_initial_pub_keys: int, blockchain_priv
     :param client: An instance of BlockchainClient for interacting with the blockchain.
     :type client: BlockchainClient
     """
-    priv_keys_list, pub_keys_list = generate_and_register_keys(blockchain_priv_key, client, num_of_initial_pub_keys)
-    signing_priv_key, _ = priv_keys_list.pop(0), pub_keys_list.pop(0)
+    signing_priv_key, _ = all_priv_keys_list.pop(0), all_pub_keys_list.pop(0)
     message = generate_random_scalar()
     start_time = time.time()
-    signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
+    signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, all_pub_keys_list)[1]
     end_time = time.time()
     elapsed_time = end_time - start_time
 
@@ -296,13 +306,17 @@ def aggregated_tests_tree(ring_sizes_list: list[int], heights_of_tree: list[int]
     print(header, flush=True)
 
     for ring_size, tree_height in zip(ring_sizes_list, heights_of_tree):
-        num_of_initial_pub_keys = ring_size**tree_height
+        num_of_initial_pub_keys = ring_size ** (tree_height + 1)
         results_for_all_trials = [[0 for _ in range(len(Attribute))] for _ in range(len(TestType))]
         for _ in range(num_of_trials):
             client, blockchain_priv_key = deploy_contract_and_get_account()
-            results = full_tree_test(ring_size, tree_height, num_of_initial_pub_keys, blockchain_priv_key, client)
+            priv_keys_list, pub_keys_list = generate_and_register_keys(
+                blockchain_priv_key, client, num_of_initial_pub_keys
+            )
+            results = full_tree_test(ring_size, tree_height, priv_keys_list, pub_keys_list, blockchain_priv_key, client)
             client, blockchain_priv_key = deploy_contract_and_get_account()
-            equivalent_test(results, num_of_initial_pub_keys, blockchain_priv_key, client)
+            register_keys(blockchain_priv_key, client, priv_keys_list, pub_keys_list)
+            equivalent_test(results, priv_keys_list, pub_keys_list, blockchain_priv_key, client)
             results_for_all_trials = [
                 [results_for_all_trials[i][j] + results[i][j] for j in range(len(results_for_all_trials[0]))]
                 for i in range(len(results_for_all_trials))
@@ -372,7 +386,12 @@ def parse_arguments():
     # Tree group
     tree_parser = subparsers.add_parser("full_tree", help="Tree configurations")
     tree_parser.add_argument("--ring_sizes", type=parse_range_list, required=True, help="Ring sizes")
-    tree_parser.add_argument("--heights_of_tree", type=parse_range_list, required=True, help="Height of tree")
+    tree_parser.add_argument(
+        "--heights_of_tree",
+        type=parse_range_list,
+        required=True,
+        help="Height of tree defined as the number of edges from the leaf node to the root node",
+    )
     tree_parser.add_argument("--num_of_trials", type=int, required=True, help="Number of trials")
 
     return parser.parse_args()
