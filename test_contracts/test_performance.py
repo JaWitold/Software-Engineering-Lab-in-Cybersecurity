@@ -1,10 +1,16 @@
+"""
+@ TODO: Use numpy for results and calculate standard deviation
+"""
+
 import argparse
+import copy
 import os
 import random
 import sys
 import time
 from enum import Enum
 from itertools import product
+from socket import timeout as socket_timeout
 
 from deploy_util_for_tests import deploy_contract_and_get_account
 
@@ -13,7 +19,7 @@ from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_
     NodeRingSchnorrSignature,
     generate_random_scalar,
 )
-from test_contracts import generate_and_register_keys, register_keys
+from test_contracts import generate_and_register_keys
 
 
 class Tee:
@@ -129,13 +135,10 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
             ).estimate_gas()
             results[Attribute.VERIFYING_GAS.value] += gas_estimate
 
-        latest_block_number = client.web3.eth.block_number
-        start_block_number = latest_block_number - num_of_trials + 1
-        for block_number in range(start_block_number, latest_block_number + 1):
-            block = client.web3.eth.get_block(block_number)
-            results[Attribute.BLOCK_SIZE.value] += block.size
-
         results = [element / num_of_trials for element in results]
+        latest_block_number = client.web3.eth.block_number
+        block_size = client.web3.eth.get_block(latest_block_number).size
+        results[Attribute.BLOCK_SIZE.value] = block_size
         row_to_print = f"{curr_ring_size},"
         row_to_print += ",".join(str(results[attribute.value]) for attribute in Attribute)
         print(row_to_print, flush=True)
@@ -178,8 +181,7 @@ def full_tree_test(
     """
     num_of_added_nodes = 0
     num_of_all_nodes = (ring_size ** (tree_height + 1) - 1) / (ring_size - 1)
-    results = [[0 for _ in range(len(Attribute))] for _ in range(len(TestType))]
-
+    results = [0 for _ in range(len(Attribute))]
     for lvl in range(tree_height + 1, 0, -1):  # +1 bcs edge-based definiton of height is used
         priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl = [], []
         is_first_chunk = True
@@ -206,43 +208,27 @@ def full_tree_test(
                 message, *arguments_to_verify
             ).estimate_gas()
 
-            # single
-            results[TestType.SINGLE.value][Attribute.SIGNING_TIME.value] += elapsed_time
-            results[TestType.SINGLE.value][Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-            results[TestType.SINGLE.value][Attribute.VERIFYING_GAS.value] += gas_estimate
-
-            # path
-            if is_first_chunk:
-                block_number = client.web3.eth.block_number
-                block = client.web3.eth.get_block(block_number)
-                results[TestType.PATH.value][Attribute.BLOCK_SIZE.value] += block.size
-                results[TestType.PATH.value][Attribute.SIGNING_TIME.value] += elapsed_time
-                results[TestType.PATH.value][Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-                results[TestType.PATH.value][Attribute.VERIFYING_GAS.value] += gas_estimate
-
-            is_first_chunk = False
+            results[Attribute.SIGNING_TIME.value] += elapsed_time
+            results[Attribute.ADDING_GAS.value] += receipt_add.gasUsed
+            results[Attribute.VERIFYING_GAS.value] += gas_estimate
             num_of_added_nodes += 1
-        # After whole tree generation
-        # Calculate average block size
+
+        # After whole level generation
         all_priv_keys_list, all_pub_keys_list = priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl
         num_of_signatures_on_next_lvl = ring_size ** (lvl - 1)
         assert (
             len(priv_keys_list_for_next_lvl) == num_of_signatures_on_next_lvl
         ), f"{len(priv_keys_list_for_next_lvl)=} != {num_of_signatures_on_next_lvl=}"
-
     assert num_of_added_nodes == num_of_all_nodes, f"{num_of_added_nodes=} != {num_of_all_nodes=}"
-    latest_block_number = client.web3.eth.block_number
-    start_block_number = latest_block_number - num_of_added_nodes + 1
-    for block_number in range(start_block_number, latest_block_number + 1):
-        block = client.web3.eth.get_block(block_number)
-        results[TestType.SINGLE.value][Attribute.BLOCK_SIZE.value] += block.size
 
-    results[TestType.SINGLE.value] = [value / num_of_all_nodes for value in results[TestType.SINGLE.value]]
+    results = [value / num_of_all_nodes for value in results]
+    latest_block_number = client.web3.eth.block_number
+    block_size = client.web3.eth.get_block(latest_block_number).size
+    results[Attribute.BLOCK_SIZE.value] = block_size
     return results
 
 
 def equivalent_test(
-    results: list,
     all_priv_keys_list: list[int],
     all_pub_keys_list: list,
     blockchain_priv_key: str,
@@ -251,9 +237,6 @@ def equivalent_test(
     # pylint: disable=R0914
     """
     Test the performance of an equivalent signature process on the blockchain.
-
-    :param results: The list to store the test results.
-    :type results: list
 
     :param all_priv_keys_list: List of the private keys for which
         the public keys have been registered.
@@ -280,14 +263,18 @@ def equivalent_test(
     gas_estimate = client.contract.functions.testVerifyNodeRingSignature(message, *arguments_to_verify).estimate_gas()
     block_number = client.web3.eth.block_number
     block = client.web3.eth.get_block(block_number)
-    # equivalent
-    results[TestType.EQUIVALENT.value][Attribute.SIGNING_TIME.value] += elapsed_time
-    results[TestType.EQUIVALENT.value][Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-    results[TestType.EQUIVALENT.value][Attribute.VERIFYING_GAS.value] += gas_estimate
-    results[TestType.EQUIVALENT.value][Attribute.BLOCK_SIZE.value] += block.size
+
+    results = [0 for _ in range(len(Attribute))]
+    results[Attribute.SIGNING_TIME.value] += elapsed_time
+    results[Attribute.ADDING_GAS.value] += receipt_add.gasUsed
+    results[Attribute.VERIFYING_GAS.value] += gas_estimate
+    results[Attribute.BLOCK_SIZE.value] += block.size
+
+    return results
 
 
 def aggregated_tests_tree(ring_sizes_list: list[int], heights_of_tree: list[int], num_of_trials):
+    # pylint: disable=R0914
     """
     Perform aggregated tests for a range of ring sizes and heights of tree.
 
@@ -313,15 +300,22 @@ def aggregated_tests_tree(ring_sizes_list: list[int], heights_of_tree: list[int]
             priv_keys_list, pub_keys_list = generate_and_register_keys(
                 blockchain_priv_key, client, num_of_initial_pub_keys
             )
-            results = full_tree_test(ring_size, tree_height, priv_keys_list, pub_keys_list, blockchain_priv_key, client)
-            client, blockchain_priv_key = deploy_contract_and_get_account()
-            register_keys(blockchain_priv_key, client, priv_keys_list, pub_keys_list)
-            equivalent_test(results, priv_keys_list, pub_keys_list, blockchain_priv_key, client)
-            results_for_all_trials = [
-                [results_for_all_trials[i][j] + results[i][j] for j in range(len(results_for_all_trials[0]))]
-                for i in range(len(results_for_all_trials))
-            ]
-        results_for_all_trials = [[element / num_of_trials for element in row] for row in results]
+            priv_keys_list_copy = copy.deepcopy(priv_keys_list)
+            pub_keys_list_copy = copy.deepcopy(pub_keys_list)
+            try:
+                results_for_equiv = equivalent_test(priv_keys_list, pub_keys_list, blockchain_priv_key, client)
+            except socket_timeout:
+                results_for_equiv = [0 for _ in range(len(Attribute))]
+            results_for_single = full_tree_test(
+                ring_size, tree_height, priv_keys_list_copy, pub_keys_list_copy, blockchain_priv_key, client
+            )
+            for attribute in Attribute:
+                att_val = attribute.value
+                results_for_all_trials[TestType.SINGLE.value][att_val] += results_for_single[att_val]
+                results_for_all_trials[TestType.PATH.value][att_val] += results_for_single[att_val] * (tree_height + 1)
+                results_for_all_trials[TestType.EQUIVALENT.value][att_val] += results_for_equiv[att_val]
+
+        results_for_all_trials = [[element / num_of_trials for element in row] for row in results_for_all_trials]
         row_to_print = f"{ring_size},{tree_height},{num_of_initial_pub_keys},"
         row_to_print += ",".join(
             str(results_for_all_trials[test_type.value][attribute.value])
