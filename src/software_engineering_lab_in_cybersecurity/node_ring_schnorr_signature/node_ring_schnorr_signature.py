@@ -80,7 +80,7 @@ class NodeRingSchnorrSignature:
         :rtype: NodeRingSchnorrSignature
         """
 
-        # Step 1: Generate an ephemeral key pair
+        # Step 1: Generate an new key pair for node
         signature_private_key, signature_public_key = NodeRingSchnorrSignature.__generate_signature_keys(
             message, private_key, ring_public_keys
         )
@@ -113,7 +113,7 @@ class NodeRingSchnorrSignature:
             private_key, signer_r_point, signer_sub_signature, ring_public_keys, signature_random_points, sub_signatures
         )
 
-        return NodeRingSchnorrSignature(
+        return signature_private_key, NodeRingSchnorrSignature(
             signature_public_key, ring_public_keys, signature_random_points, sub_signatures, signature_sum
         )
 

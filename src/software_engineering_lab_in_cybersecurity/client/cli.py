@@ -238,11 +238,12 @@ def main(args: List[str]) -> None:
             account_address, account_private_key = select_account_for_transaction(_logger)
 
         public_keys_ring = select_public_keys_ring(accounts, account_address)
-        signature = NodeRingSchnorrSignature.sign(message, message_private_key, public_keys_ring)
+        signature_private_key, signature = NodeRingSchnorrSignature.sign(message, message_private_key, public_keys_ring)
 
         client = BlockchainClient(args.ip, args.port, args.chain_id, args.contract_address)
         client.store_signature(account_private_key, message, signature)
 
+        _logger.info("Signature private key: %s", signature_private_key)
         _logger.info("Signature public key: %s", signature.signature_public_key)
     elif args.verify:
         # ask for signature public key (x, y)

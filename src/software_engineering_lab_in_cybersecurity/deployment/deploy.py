@@ -54,7 +54,7 @@ class ContractDeployer(BlockchainBase):
         self.account = self.web3.eth.account.from_key(self.private_key)
         assert self.account is not None, "Failed to create account from provided private key."
 
-    def deploy_contract(self, contract_name: str) -> None:
+    def deploy_contract(self, contract_name: str) -> TxReceipt:
         """
         Deploys the specified Solidity contract to the blockchain.
 

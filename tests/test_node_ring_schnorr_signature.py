@@ -26,7 +26,7 @@ class TestNodeRingSchnorrSignature(unittest.TestCase):
         pks = [multiply(G1, 1), multiply(G1, 2), multiply(G1, 3), multiply(G1, 4)]
         # print(node_ring_signature)
         self.assertTrue(
-            NodeRingSchnorrSignature.sign(message, sk, pks).verify(message),
+            NodeRingSchnorrSignature.sign(message, sk, pks)[1].verify(message),
             "Signature should verify with matching message and keys.",
         )
 
@@ -40,7 +40,7 @@ class TestNodeRingSchnorrSignature(unittest.TestCase):
         pks = [multiply(G1, get_random_int()), multiply(G1, get_random_int()), multiply(G1, get_random_int())]
         # print(node_ring_signature)
         self.assertFalse(
-            NodeRingSchnorrSignature.sign(message, sk, pks).verify(forged_message),
+            NodeRingSchnorrSignature.sign(message, sk, pks)[1].verify(forged_message),
             "Signature should fail for forged message and keys.",
         )
 
@@ -52,7 +52,7 @@ class TestNodeRingSchnorrSignature(unittest.TestCase):
         forged_message = get_random_int()
         sk = get_random_int()
         pks = [multiply(G1, get_random_int()), multiply(G1, get_random_int()), multiply(G1, get_random_int())]
-        signature = NodeRingSchnorrSignature.sign(message, sk, pks)
+        signature = NodeRingSchnorrSignature.sign(message, sk, pks)[1]
         signature.sub_signatures[0].s += 1
         self.assertFalse(
             signature.verify(forged_message),
@@ -67,7 +67,7 @@ class TestNodeRingSchnorrSignature(unittest.TestCase):
         sk = get_random_int()
         # print(node_ring_signature)
         self.assertTrue(
-            NodeRingSchnorrSignature.sign(message, sk, []).verify(message),
+            NodeRingSchnorrSignature.sign(message, sk, [])[1].verify(message),
             "Signature should verify with matching message and keys.",
         )
 

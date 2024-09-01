@@ -2,6 +2,7 @@ import os
 import socket
 import subprocess
 
+from software_engineering_lab_in_cybersecurity.client.client import BlockchainClient
 from software_engineering_lab_in_cybersecurity.deployment.deploy import ContractDeployer
 from software_engineering_lab_in_cybersecurity.utility import load_accounts
 
@@ -33,32 +34,30 @@ def _chek_connection(host, port):
         return False
 
 
-def deploy_contract_for_tests(contract_name: str = CONTRACT_NAME):
-    """
-    Util function to deploy contract that should be tested
-
-    :param contract_name: contract name that would be deployed
-    "type contract_name: str
-    """
-    account_idx = 0
-    account_address, priv_key = get_account_address_and_priv_key(account_idx)
-    assert _check_docker_container_exists(TEST_CONTAINER_NAME), f"Docker Ganache not launched {TEST_CONTAINER_NAME=}"
-    assert _chek_connection(TEST_IP, TEST_PORT), f"Docker connection error {TEST_IP=}"
-
-    deployer = ContractDeployer(account_address, priv_key, TEST_IP, TEST_PORT, TEST_CHAIN_ID)
-    return deployer.deploy_contract(contract_name)
-
-
-def get_account_address_and_priv_key(account_idx: int):
+def _get_account_address_and_priv_key():
     """
     Returns account address and corresponding private key for it
-
-    :param account_idx: index of account to return
-    "type account_idx: int
     """
+    account_idx = 0
     accounts = load_accounts(None)
     addresses = list(accounts["private_keys"].keys())
     assert len(addresses) > 0, "Account addresses not loaded"
     account_address = addresses[account_idx]
     priv_key = accounts["private_keys"][account_address]
     return account_address, priv_key
+
+
+def deploy_contract_and_get_account(contract_name: str = CONTRACT_NAME):
+    """
+    Util function to deploy contract that should be tested
+
+    :param contract_name: contract name that would be deployed
+    "type contract_name: str
+    """
+    account_address, blockchain_priv_key = _get_account_address_and_priv_key()
+    assert _check_docker_container_exists(TEST_CONTAINER_NAME), f"Docker Ganache not launched {TEST_CONTAINER_NAME=}"
+    assert _chek_connection(TEST_IP, TEST_PORT), f"Docker connection error {TEST_IP=}"
+    deployer = ContractDeployer(account_address, blockchain_priv_key, TEST_IP, TEST_PORT, TEST_CHAIN_ID)
+    contract_address = deployer.deploy_contract(contract_name).contractAddress
+    client = BlockchainClient(TEST_IP, TEST_PORT, TEST_CHAIN_ID, contract_address)
+    return client, blockchain_priv_key

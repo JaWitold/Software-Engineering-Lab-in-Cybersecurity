@@ -1,15 +1,7 @@
-import copy
 import unittest
 
 import requests
-from deploy_util_for_tests import (
-    CONTRACT_NAME,
-    TEST_CHAIN_ID,
-    TEST_IP,
-    TEST_PORT,
-    deploy_contract_for_tests,
-    get_account_address_and_priv_key,
-)
+from deploy_util_for_tests import deploy_contract_and_get_account
 
 from software_engineering_lab_in_cybersecurity.client.client import BlockchainClient
 from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_ring_schnorr_signature import (
@@ -22,27 +14,42 @@ from software_engineering_lab_in_cybersecurity.node_ring_schnorr_signature.node_
 )
 
 
-def generate_random_nr_signature(ring_size: int):
-    """
-    Simulate node ring signature with given number of ring size
-    """
-    priv_keys_list = [generate_random_scalar() for _ in range(ring_size - 1)]
+def _gen_rand_keys(num_of_keys: int):
+    priv_keys_list = [generate_random_scalar() for _ in range(num_of_keys)]
     pub_keys_list = [multiply(G1, priv_key) for priv_key in priv_keys_list]
-    pub_keys_list_copy = copy.deepcopy(pub_keys_list)
+    return priv_keys_list, pub_keys_list
 
-    msg = generate_random_scalar()
-    priv_key = generate_random_scalar()
-    while priv_key in priv_keys_list:
-        priv_key = generate_random_scalar()
-    signature = NodeRingSchnorrSignature.sign(msg, priv_key, pub_keys_list)
 
-    idx = 0
-    while len(pub_keys_list_copy) > idx and pub_keys_list_copy[idx] == signature.ring_public_keys[idx]:
-        idx += 1
+def register_keys(blockchain_priv_key: str, client: BlockchainClient, priv_keys_list: list, pub_keys_list: list):
+    """
+    Function that registers given keys using given blockchain client
+    """
+    for priv_key, pub_key in zip(priv_keys_list, pub_keys_list):
+        sigma = SchnorrSignature.sign(convert_point_2d_to_list(pub_key)[0], priv_key)
+        client.register(blockchain_priv_key, pub_key, sigma.r, sigma.s)
 
-    priv_keys_list.insert(idx, priv_key)
 
-    return priv_keys_list, msg, signature
+def generate_and_register_keys(blockchain_priv_key: str, client: BlockchainClient, num_of_keys: int):
+    """
+    Generate random private keys and their corresponding public keys, and register them on the blockchain.
+
+    This function generates a specified number of random private keys. For each private key, it computes
+    the corresponding public key and registers both keys on the blockchain using the provided client.
+
+    :param blockchain_priv_key: The private key of the blockchain account used for registration.
+    :type blockchain_priv_key: str
+
+    :param client: An instance of BlockchainClient that provides methods to interact with the blockchain.
+    :type client: BlockchainClient
+
+    :param num_of_keys: The number of private/public key pairs to generate and register.
+    :type num_of_keys: int
+
+    :returns: None
+    """
+    priv_keys_list, pub_keys_list = _gen_rand_keys(num_of_keys)
+    register_keys(blockchain_priv_key, client, priv_keys_list, pub_keys_list)
+    return priv_keys_list, pub_keys_list
 
 
 class TestContracts(unittest.TestCase):
@@ -54,9 +61,7 @@ class TestContracts(unittest.TestCase):
         Method to deploy contract before testsuite
         """
         # Perform initialization or setup common to all test cases
-        contract_address = deploy_contract_for_tests().contractAddress
-        cls.client = BlockchainClient(TEST_IP, TEST_PORT, TEST_CHAIN_ID, contract_address)
-        _, cls.blockchain_priv_key = get_account_address_and_priv_key(2)
+        cls.client, cls.blockchain_priv_key = deploy_contract_and_get_account()
 
     def test_contract_schnorr_signature_verification(self):
         """
@@ -66,12 +71,10 @@ class TestContracts(unittest.TestCase):
         pubkey = multiply(G1, privkey)
         message = 123
         signature = SchnorrSignature.sign(message, privkey)
-
         result = self.client.contract.functions.testVerifySchnorrSignature(
             message, convert_point_2d_to_list(pubkey), convert_point_2d_to_list(signature.r), signature.s
         ).call()
-
-        self.assertTrue(result, f"{CONTRACT_NAME} verification failed")
+        self.assertTrue(result, "verification failed")
 
     def test_contract_schnorr_signature_verification_failed(self):
         """
@@ -82,47 +85,42 @@ class TestContracts(unittest.TestCase):
         message = 123
         signature = SchnorrSignature.sign(message, privkey)
         signature.s += signature.s // 2
-
         result = self.client.contract.functions.testVerifySchnorrSignature(
             message, convert_point_2d_to_list(pubkey), convert_point_2d_to_list(signature.r), signature.s
         ).call()
-
-        self.assertFalse(result, f"{CONTRACT_NAME} verification succedded for invalid signature")
+        self.assertFalse(result, "verification succedded for invalid signature")
 
     def test_contract_node_ring_schnorr_signature_verification(self):
         """
         Perform NodeRingSchnorr signature verification using the contract.
         """
         ring_size = 10
-        _, msg, signature = generate_random_nr_signature(ring_size)
+        priv_keys_list, pub_keys_keys_list = _gen_rand_keys(ring_size)
+        signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
+        message = generate_random_scalar()
+        signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)[1]
         arguments = self.client.convert_nr_sign_sigma_to_sol_arguments(signature)
-        result = self.client.contract.functions.testVerifyNodeRingSignature(msg, *arguments).call()
-
-        self.assertTrue(result, f"{CONTRACT_NAME} verification failed")
+        result = self.client.contract.functions.testVerifyNodeRingSignature(message, *arguments).call()
+        self.assertTrue(result, "verification failed")
 
     def test_contract_signature_storage(self):
         """
         Store signature on blockchain using the contract.
         """
-        # pylint: disable=R0914
-        ring_size = 4
-        priv_keys_list, msg, signature = generate_random_nr_signature(ring_size)
+        ring_size = 10
+        priv_keys_list, pub_keys_keys_list = generate_and_register_keys(
+            self.blockchain_priv_key, self.client, ring_size
+        )
+        signing_priv_key, _ = priv_keys_list.pop(), pub_keys_keys_list.pop()
+        message = generate_random_scalar()
+        signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_keys_list)[1]
         prev_block_num = self.client.web3.eth.block_number
 
-        # register keys
         exception = None
-        for priv_key, pub_key in zip(priv_keys_list, signature.ring_public_keys):
-            try:
-                sigma = SchnorrSignature.sign(convert_point_2d_to_list(pub_key)[0], priv_key)
-                receipt = self.client.register(self.blockchain_priv_key, pub_key, sigma.r, sigma.s)
-            except requests.exceptions.ReadTimeout as e:
-                exception = e
-
         try:
-            receipt = self.client.store_signature(self.blockchain_priv_key, msg, signature)
+            receipt = self.client.store_signature(self.blockchain_priv_key, message, signature)
             curr_block_num = receipt.blockNumber
             self.assertGreater(curr_block_num, prev_block_num, "Block wasn't added")
-        # get signature
         except requests.exceptions.ReadTimeout as e:
             exception = e
 
