@@ -53,7 +53,7 @@ class BlockchainBase(ABC):
             }
         )
         signature = self.web3.eth.account.sign_transaction(transaction, private_key)
-        return self.web3.eth.send_raw_transaction(signature.rawTransaction)
+        return self.web3.eth.send_raw_transaction(signature.raw_transaction)
 
     def wait_for_receipt(self, transaction_hash: HexBytes) -> TxReceipt:
         """
