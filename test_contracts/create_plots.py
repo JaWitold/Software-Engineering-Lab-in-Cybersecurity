@@ -3,7 +3,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from test_performance import Attribute, TestType
+from test_performance import FinalAttr, TestType
 
 
 def setup_figure():
@@ -51,7 +51,7 @@ def plot_full_tree_test(df, dir_for_plots: str):
     df["X_AXIS"] = "(" + df["RING_SIZE"].astype(str) + ", " + df["TREE_HEIGHT"].astype(str) + ")"
     x = np.arange(len(df["X_AXIS"]))  # the label locations
     bar_width = 0.2  # width of the bars
-    for attribute in Attribute:
+    for attribute in FinalAttr:
         setup_figure()
         plt.grid(False)
         for i, test_type in enumerate(TestType):
@@ -83,18 +83,24 @@ def plot_storing_vs_verifying(df, dir_for_plots: str):
     :type dir_for_plots: str
 
     """
-    mean_multiplicity = (df[Attribute.ADDING_GAS.name] / df[Attribute.VERIFYING_GAS.name]).mean().mean()
-    print(f"{Attribute.ADDING_GAS.name} / {Attribute.VERIFYING_GAS.name} mean =  {mean_multiplicity}")
+    mean_multiplicity = (df[FinalAttr.MEAN_ADDING_GAS.name] / df[FinalAttr.MEAN_VERIFYING_GAS.name]).mean().mean()
+    print(f"{FinalAttr.MEAN_VERIFYING_GAS.name} / {FinalAttr.MEAN_VERIFYING_GAS.name} mean =  {mean_multiplicity}")
 
     # Gas usage
     setup_figure()
     x_label = "RING_SIZE"
     plt.plot(
-        df[x_label], df[Attribute.ADDING_GAS.name], marker="o", linestyle="-", color="b", label="adding single node"
+        df[x_label],
+        df[FinalAttr.MEAN_ADDING_GAS.name],
+        marker="o",
+        linestyle="-",
+        color="b",
+        label="adding single node",
     )
+    # verification
     plt.plot(
         df[x_label],
-        df[Attribute.VERIFYING_GAS.name],
+        df[FinalAttr.MEAN_VERIFYING_GAS.name],
         marker="+",
         linestyle="--",
         color="r",
@@ -112,14 +118,42 @@ def plot_storing_vs_verifying(df, dir_for_plots: str):
     # Block size
     setup_figure()
     plt.plot(
-        df[x_label], df[Attribute.BLOCK_SIZE.name], marker="o", linestyle="-", color="b", label="block size [bytes]"
+        df[x_label], df[FinalAttr.BLOCK_SIZE.name], marker="o", linestyle="-", color="b", label="block size [bytes]"
     )
     # plt.title("Block size [bytes] vs Size of a ring")
     plt.xlabel("Size of a ring")
     plt.ylabel("Block size [bytes]")
     # plt.legend()
     plt.tight_layout()
-    filename = os.path.join(dir_for_plots, "storing_vs_verifying_" + Attribute.BLOCK_SIZE.name.lower() + ".pdf")
+    filename = os.path.join(dir_for_plots, "storing_vs_verifying_" + FinalAttr.BLOCK_SIZE.name.lower() + ".pdf")
+    plt.savefig(filename, dpi=300)
+    plt.close()
+
+    # Signing time
+    setup_figure()
+    plt.plot(
+        df[x_label],
+        df[FinalAttr.MEAN_SIGNING_TIME.name] - df[FinalAttr.STD_DEV_SIGNING_TIME.name],
+        marker="o",
+        linestyle="-",
+        color="g",
+        label="MEAN - SD",
+    )
+    plt.plot(df[x_label], df[FinalAttr.MEAN_SIGNING_TIME.name], marker="o", linestyle="-", color="b", label="MEAN")
+    plt.plot(
+        df[x_label],
+        df[FinalAttr.MEAN_SIGNING_TIME.name] + df[FinalAttr.STD_DEV_SIGNING_TIME.name],
+        marker="o",
+        linestyle="-",
+        color="r",
+        label="MEAN + SD",
+    )
+    # plt.title("Block size [bytes] vs Size of a ring")
+    plt.xlabel("Size of a ring")
+    plt.ylabel("Signing time [s]")
+    plt.legend()
+    plt.tight_layout()
+    filename = os.path.join(dir_for_plots, "storing_vs_verifying_" + FinalAttr.MEAN_SIGNING_TIME.name.lower() + ".pdf")
     plt.savefig(filename, dpi=300)
     plt.close()
 

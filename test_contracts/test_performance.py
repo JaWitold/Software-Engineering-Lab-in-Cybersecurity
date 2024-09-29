@@ -8,10 +8,12 @@ import os
 import random
 import sys
 import time
+from datetime import datetime
 from enum import Enum
 from itertools import product
 from socket import timeout as socket_timeout
 
+import numpy as np
 from deploy_util_for_tests import deploy_contract_and_get_account
 
 from software_engineering_lab_in_cybersecurity.client.client import BlockchainClient
@@ -62,25 +64,38 @@ class TestType(Enum):
     EQUIVALENT = 2
 
 
-class Attribute(Enum):
+class TestedAttr(Enum):
     """
     Enumeration for different attributes being tested.
     """
 
     ADDING_GAS = 0
     VERIFYING_GAS = 1
-    BLOCK_SIZE = 2
-    SIGNING_TIME = 3
+    SIGNING_TIME = 2
+
+
+class FinalAttr(Enum):
+    """
+    Enumeration for attributes that will be single values with final result
+    """
+
+    MEAN_ADDING_GAS = TestedAttr.ADDING_GAS.value
+    MEAN_VERIFYING_GAS = TestedAttr.VERIFYING_GAS.value
+    MEAN_SIGNING_TIME = TestedAttr.SIGNING_TIME.value
+    STD_DEV_ADDING_GAS = TestedAttr.SIGNING_TIME.value + 1
+    STD_DEV_VERIFYING_GAS = TestedAttr.SIGNING_TIME.value + 2
+    STD_DEV_SIGNING_TIME = TestedAttr.SIGNING_TIME.value + 3
+    BLOCK_SIZE = TestedAttr.SIGNING_TIME.value + 4
 
     def label_str(self):
         """
         Function that is used for plots' labels
         """
         attributes_strs = {
-            Attribute.ADDING_GAS: "Gas usage for adding signature",
-            Attribute.VERIFYING_GAS: "Gas usage for verifying signature",
-            Attribute.BLOCK_SIZE: "Block size [bytes]",
-            Attribute.SIGNING_TIME: "Duration [s] of signature creation",
+            FinalAttr.MEAN_ADDING_GAS: "Mean gas usage for adding signature",
+            FinalAttr.MEAN_VERIFYING_GAS: "Mean gas usage for verifying signature",
+            FinalAttr.BLOCK_SIZE: "Block size [bytes]",
+            FinalAttr.MEAN_SIGNING_TIME: "Mean duration [s] of signature creation",
         }
         return attributes_strs.get(self, "Unknown attribute")
 
@@ -113,34 +128,41 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
     :type num_of_trials: int
     """
     client, blockchain_priv_key = deploy_contract_and_get_account()
-    results = [0 for _ in range(len(Attribute))]
     header = "RING_SIZE,"
-    header += ",".join(f"{attribute.name}" for attribute in Attribute)
+    header += ",".join(f"{attribute.name}" for attribute in FinalAttr)
     print(header)
+    intermediate_results = np.zeros((num_of_trials, len(TestedAttr)), dtype=float)
 
     for curr_ring_size in range(1, max_ring_size + 1):
-        for _ in range(num_of_trials):
+        for i in range(num_of_trials):
             # python generation part
             priv_keys_list, pub_keys_list = generate_and_register_keys(blockchain_priv_key, client, curr_ring_size)
             signing_priv_key, _ = priv_keys_list.pop(), pub_keys_list.pop()
             message = generate_random_scalar()
+            start_time = time.time()
             signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
+            end_time = time.time()
+            intermediate_results[i][TestedAttr.SIGNING_TIME.value] = end_time - start_time
 
             # action on blockchain
             receipt_add = client.store_signature(blockchain_priv_key, message, signature)
-            results[Attribute.ADDING_GAS.value] += receipt_add.gasUsed
+            intermediate_results[i][TestedAttr.ADDING_GAS.value] = receipt_add.gasUsed
             arguments_to_verify = client.convert_nr_sign_sigma_to_sol_arguments(signature)
             gas_estimate = client.contract.functions.testVerifyNodeRingSignature(
                 message, *arguments_to_verify
             ).estimate_gas()
-            results[Attribute.VERIFYING_GAS.value] += gas_estimate
+            intermediate_results[i][TestedAttr.VERIFYING_GAS.value] = gas_estimate
 
-        results = [element / num_of_trials for element in results]
+        mean_values = np.mean(intermediate_results, axis=0)
+        std_values = np.std(intermediate_results, axis=0)
         latest_block_number = client.web3.eth.block_number
         block_size = client.web3.eth.get_block(latest_block_number).size
-        results[Attribute.BLOCK_SIZE.value] = block_size
+
         row_to_print = f"{curr_ring_size},"
-        row_to_print += ",".join(str(results[attribute.value]) for attribute in Attribute)
+        row_to_print += ",".join(str(mean_values[attr.value]) for attr in TestedAttr)
+        row_to_print += ","
+        row_to_print += ",".join(str(std_values[attr.value]) for attr in TestedAttr)
+        row_to_print += "," + str(block_size)
         print(row_to_print, flush=True)
 
 
@@ -180,8 +202,9 @@ def full_tree_test(
     :rtype: list[list[float]]
     """
     num_of_added_nodes = 0
-    num_of_all_nodes = (ring_size ** (tree_height + 1) - 1) / (ring_size - 1)
-    results = [0 for _ in range(len(Attribute))]
+    num_of_all_nodes = int((ring_size ** (tree_height + 1) - 1) // (ring_size - 1))
+    intermediate_results = np.zeros((num_of_all_nodes, len(TestedAttr)), dtype=float)
+
     for lvl in range(tree_height + 1, 0, -1):  # +1 bcs edge-based definiton of height is used
         priv_keys_list_for_next_lvl, pub_keys_list_for_next_lvl = [], []
         is_first_chunk = True
@@ -196,8 +219,7 @@ def full_tree_test(
             next_lvl_signature_private_key, signature = NodeRingSchnorrSignature.sign(
                 message, curr_lvl_signature_priv_key, pub_keys_chunk
             )
-            end_time = time.time()
-            elapsed_time = end_time - start_time
+            elapsed_time = time.time() - start_time
             priv_keys_list_for_next_lvl.append(next_lvl_signature_private_key)
             pub_keys_list_for_next_lvl.append(signature.signature_public_key)
 
@@ -208,9 +230,9 @@ def full_tree_test(
                 message, *arguments_to_verify
             ).estimate_gas()
 
-            results[Attribute.SIGNING_TIME.value] += elapsed_time
-            results[Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-            results[Attribute.VERIFYING_GAS.value] += gas_estimate
+            intermediate_results[num_of_added_nodes][TestedAttr.ADDING_GAS.value] = receipt_add.gasUsed
+            intermediate_results[num_of_added_nodes][TestedAttr.SIGNING_TIME.value] = elapsed_time
+            intermediate_results[num_of_added_nodes][TestedAttr.VERIFYING_GAS.value] = gas_estimate
             num_of_added_nodes += 1
 
         # After whole level generation
@@ -221,11 +243,7 @@ def full_tree_test(
         ), f"{len(priv_keys_list_for_next_lvl)=} != {num_of_signatures_on_next_lvl=}"
     assert num_of_added_nodes == num_of_all_nodes, f"{num_of_added_nodes=} != {num_of_all_nodes=}"
 
-    results = [value / num_of_all_nodes for value in results]
-    latest_block_number = client.web3.eth.block_number
-    block_size = client.web3.eth.get_block(latest_block_number).size
-    results[Attribute.BLOCK_SIZE.value] = block_size
-    return results
+    return np.mean(intermediate_results, axis=0)
 
 
 def equivalent_test(
@@ -261,14 +279,11 @@ def equivalent_test(
     receipt_add = client.store_signature(blockchain_priv_key, message, signature)
     arguments_to_verify = client.convert_nr_sign_sigma_to_sol_arguments(signature)
     gas_estimate = client.contract.functions.testVerifyNodeRingSignature(message, *arguments_to_verify).estimate_gas()
-    block_number = client.web3.eth.block_number
-    block = client.web3.eth.get_block(block_number)
 
-    results = [0 for _ in range(len(Attribute))]
-    results[Attribute.SIGNING_TIME.value] += elapsed_time
-    results[Attribute.ADDING_GAS.value] += receipt_add.gasUsed
-    results[Attribute.VERIFYING_GAS.value] += gas_estimate
-    results[Attribute.BLOCK_SIZE.value] += block.size
+    results = np.zeros((len(TestedAttr)), dtype=float)
+    results[TestedAttr.ADDING_GAS.value] = receipt_add.gasUsed
+    results[TestedAttr.VERIFYING_GAS.value] = gas_estimate
+    results[TestedAttr.SIGNING_TIME.value] = elapsed_time
 
     return results
 
@@ -287,41 +302,60 @@ def aggregated_tests_tree(ring_sizes_list: list[int], heights_of_tree: list[int]
     :param num_of_trials: Number of trials to run for each combination of ring size and height.
     :type num_of_trials: int
     """
-    combinations = product(TestType, Attribute)
+    combinations = product(TestType, FinalAttr)
     header = "RING_SIZE,TREE_HEIGHT,NUM_OF_INITAIL_PUB_KEYS,"
     header += ",".join(f"{test_type.name}_{attribute.name}" for test_type, attribute in combinations)
     print(header, flush=True)
 
     for ring_size, tree_height in zip(ring_sizes_list, heights_of_tree):
         num_of_initial_pub_keys = ring_size ** (tree_height + 1)
-        results_for_all_trials = [[0 for _ in range(len(Attribute))] for _ in range(len(TestType))]
-        for _ in range(num_of_trials):
+        intermediate_results = np.zeros((num_of_trials, len(TestType), len(TestedAttr)), dtype=float)
+        block_sizes = np.zeros(len(TestType), dtype=int)
+        for trial_idx in range(num_of_trials):
             client, blockchain_priv_key = deploy_contract_and_get_account()
             priv_keys_list, pub_keys_list = generate_and_register_keys(
                 blockchain_priv_key, client, num_of_initial_pub_keys
             )
             priv_keys_list_copy = copy.deepcopy(priv_keys_list)
             pub_keys_list_copy = copy.deepcopy(pub_keys_list)
+
+            # equivalent
             try:
-                results_for_equiv = equivalent_test(priv_keys_list, pub_keys_list, blockchain_priv_key, client)
+                intermediate_results[trial_idx][TestType.EQUIVALENT.value] = equivalent_test(
+                    priv_keys_list, pub_keys_list, blockchain_priv_key, client
+                )
+
             except socket_timeout:
-                results_for_equiv = [0 for _ in range(len(Attribute))]
-            results_for_single = full_tree_test(
+                intermediate_results[trial_idx][TestType.EQUIVALENT.value] = [0 for _ in range(len(FinalAttr))]
+            if trial_idx == 0:
+                latest_block_number = client.web3.eth.block_number
+                block_sizes[TestType.EQUIVALENT.value] = client.web3.eth.get_block(latest_block_number).size
+
+            # single
+            intermediate_results[trial_idx][TestType.SINGLE.value] = full_tree_test(
                 ring_size, tree_height, priv_keys_list_copy, pub_keys_list_copy, blockchain_priv_key, client
             )
-            for attribute in Attribute:
-                att_val = attribute.value
-                results_for_all_trials[TestType.SINGLE.value][att_val] += results_for_single[att_val]
-                results_for_all_trials[TestType.PATH.value][att_val] += results_for_single[att_val] * (tree_height + 1)
-                results_for_all_trials[TestType.EQUIVALENT.value][att_val] += results_for_equiv[att_val]
+            if trial_idx == 0:
+                latest_block_number = client.web3.eth.block_number
+                block_sizes[TestType.SINGLE.value] = client.web3.eth.get_block(latest_block_number).size
 
-        results_for_all_trials = [[element / num_of_trials for element in row] for row in results_for_all_trials]
-        row_to_print = f"{ring_size},{tree_height},{num_of_initial_pub_keys},"
-        row_to_print += ",".join(
-            str(results_for_all_trials[test_type.value][attribute.value])
-            for test_type in TestType
-            for attribute in Attribute
-        )
+            # path
+            intermediate_results[trial_idx][TestType.PATH.value] = intermediate_results[trial_idx][
+                TestType.SINGLE.value
+            ] * (tree_height + 1)
+            if trial_idx == 0:
+                block_sizes[TestType.PATH.value] = block_sizes[TestType.SINGLE.value] * (tree_height + 1)
+
+        mean_values = np.mean(intermediate_results, axis=0)
+        std_values = np.std(intermediate_results, axis=0)
+
+        row_to_print = f"{ring_size},{tree_height},{num_of_initial_pub_keys}"
+        for test_type in TestType:
+            row_to_print += ","
+            row_to_print += ",".join(str(mean_values[test_type.value][attribute.value]) for attribute in TestedAttr)
+            row_to_print += ","
+            row_to_print += ",".join(str(std_values[test_type.value][attribute.value]) for attribute in TestedAttr)
+            row_to_print += "," + str(block_sizes[test_type.value])
         print(row_to_print, flush=True)
 
 
@@ -395,9 +429,10 @@ def main():
     """
     Main function to handle argument parsing and execution of tests.
     """
+    dt_string = datetime.now().isoformat()
     args = parse_arguments()
     current_directory = os.path.dirname(os.path.realpath(__file__))
-    output_filename = os.path.join(current_directory, "results/csv_files", args.command + ".csv")
+    output_filename = os.path.join(current_directory, "results/csv_files", args.command + "_" + dt_string + ".csv")
 
     with open(output_filename, "w", encoding="ascii") as file:
         original_fd = sys.stdout
