@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from test_performance import FinalAttr, TestType
 
+X_DOMAIN_STR = "RING_SIZE"
+
 
 def setup_figure():
     """
@@ -48,7 +50,7 @@ def plot_full_tree_test(df, dir_for_plots: str):
 
     """
 
-    df["X_AXIS"] = "(" + df["RING_SIZE"].astype(str) + ", " + df["TREE_HEIGHT"].astype(str) + ")"
+    df["X_AXIS"] = "(" + df[X_DOMAIN_STR].astype(str) + ", " + df["TREE_HEIGHT"].astype(str) + ")"
     x = np.arange(len(df["X_AXIS"]))  # the label locations
     bar_width = 0.2  # width of the bars
     for attribute in FinalAttr:
@@ -70,6 +72,7 @@ def plot_full_tree_test(df, dir_for_plots: str):
 
 def plot_storing_vs_verifying(df, dir_for_plots: str):
     # pylint: disable=W0621
+    # pylint: disable=R0914
     """
     Generate and save line plots for gas usage and block size against ring size.
 
@@ -86,39 +89,66 @@ def plot_storing_vs_verifying(df, dir_for_plots: str):
     mean_multiplicity = (df[FinalAttr.MEAN_ADDING_GAS.name] / df[FinalAttr.MEAN_VERIFYING_GAS.name]).mean().mean()
     print(f"{FinalAttr.MEAN_VERIFYING_GAS.name} / {FinalAttr.MEAN_VERIFYING_GAS.name} mean =  {mean_multiplicity}")
 
-    # Gas usage
     setup_figure()
-    x_label = "RING_SIZE"
-    plt.plot(
-        df[x_label],
+    _, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
+    x_label = "Size of a ring"
+    y1_label = "Gas usage"
+    y2_label = "Block size [bytes]"
+
+    ax1_color = "b"
+    ax2_color = "g"
+
+    ax1.set_xlabel(x_label)
+    ax1.set_ylabel(y1_label, color=ax1_color)
+    ax2.set_ylabel(y2_label, color=ax2_color)
+
+    # block size
+    ax2.bar(
+        df[X_DOMAIN_STR],
+        df[FinalAttr.BLOCK_SIZE.name],
+        0.1,
+        color=ax2_color,
+        label="mined block for node",
+    )
+    # Gas usage
+    ax1.plot(
+        df[X_DOMAIN_STR],
         df[FinalAttr.MEAN_ADDING_GAS.name],
         marker="o",
         linestyle="-",
-        color="b",
+        color=ax1_color,
         label="adding single node",
     )
     # verification
-    plt.plot(
-        df[x_label],
+    ax1.plot(
+        df[X_DOMAIN_STR],
         df[FinalAttr.MEAN_VERIFYING_GAS.name],
         marker="+",
         linestyle="--",
-        color="r",
+        color=ax1_color,
         label="verification only",
     )
-    # plt.title("Gas usage vs Size of a ring")
-    plt.xlabel("Size of a ring")
-    plt.ylabel("Gas usage")
-    plt.legend()
+
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+
     plt.tight_layout()
-    filename = os.path.join(dir_for_plots, "storing_vs_verifying_gas_usage.pdf")
+    ax1.legend(lines + lines2, labels + labels2, loc=0)
+    filename = os.path.join(dir_for_plots, "gas_usage_and_block_size.pdf")
     plt.savefig(filename, dpi=300)
     plt.close()
 
     # Block size
     setup_figure()
     plt.plot(
-        df[x_label], df[FinalAttr.BLOCK_SIZE.name], marker="o", linestyle="-", color="b", label="block size [bytes]"
+        df[X_DOMAIN_STR],
+        df[FinalAttr.BLOCK_SIZE.name],
+        marker="o",
+        linestyle="-",
+        color="b",
+        label="block size [bytes]",
     )
     # plt.title("Block size [bytes] vs Size of a ring")
     plt.xlabel("Size of a ring")
@@ -130,27 +160,27 @@ def plot_storing_vs_verifying(df, dir_for_plots: str):
     plt.close()
 
     # Signing time
-    setup_figure()
-    plt.plot(
-        df[x_label],
-        df[FinalAttr.MEAN_SIGNING_TIME.name] - df[FinalAttr.STD_DEV_SIGNING_TIME.name],
-        marker="o",
-        linestyle="-",
-        color="g",
-        label="MEAN - SD",
-    )
-    plt.plot(df[x_label], df[FinalAttr.MEAN_SIGNING_TIME.name], marker="o", linestyle="-", color="b", label="MEAN")
-    plt.plot(
-        df[x_label],
-        df[FinalAttr.MEAN_SIGNING_TIME.name] + df[FinalAttr.STD_DEV_SIGNING_TIME.name],
-        marker="o",
-        linestyle="-",
-        color="r",
-        label="MEAN + SD",
-    )
+    # setup_figure()
+    # plt.plot(
+    #     df[X_DOMAIN_STR],
+    #     df[FinalAttr.MEAN_SIGNING_TIME.name] - df[FinalAttr.STD_DEV_SIGNING_TIME.name],
+    #     marker="o",
+    #     linestyle="-",
+    #     color="g",
+    #     label="MEAN - SD",
+    # )
+    plt.plot(df[X_DOMAIN_STR], df[FinalAttr.MEAN_SIGNING_TIME.name], marker="o", linestyle="-", color="b", label="MEAN")
+    # plt.plot(
+    #     df[X_DOMAIN_STR],
+    #     df[FinalAttr.MEAN_SIGNING_TIME.name] + df[FinalAttr.STD_DEV_SIGNING_TIME.name],
+    #     marker="o",
+    #     linestyle="-",
+    #     color="r",
+    #     label="MEAN + SD",
+    # )
     # plt.title("Block size [bytes] vs Size of a ring")
     plt.xlabel("Size of a ring")
-    plt.ylabel("Signing time [s]")
+    plt.ylabel(FinalAttr.MEAN_SIGNING_TIME.label_str())
     plt.legend()
     plt.tight_layout()
     filename = os.path.join(dir_for_plots, "storing_vs_verifying_" + FinalAttr.MEAN_SIGNING_TIME.name.lower() + ".pdf")
@@ -169,6 +199,7 @@ if __name__ == "__main__":
     for i, csv_filename in enumerate(csv_filenames_list):
         if os.path.exists(csv_filename):
             df = pd.read_csv(csv_filename)
+            X_DOMAIN_STR = list(df.columns)[0]
             plot_functions_list[i](df, dir_for_plots)
             print(f"Plots saved to {dir_for_plots} directory with prefix: {test_types[i]}")
         else:

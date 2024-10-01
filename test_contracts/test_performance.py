@@ -92,10 +92,10 @@ class FinalAttr(Enum):
         Function that is used for plots' labels
         """
         attributes_strs = {
-            FinalAttr.MEAN_ADDING_GAS: "Mean gas usage for adding signature",
-            FinalAttr.MEAN_VERIFYING_GAS: "Mean gas usage for verifying signature",
+            FinalAttr.MEAN_ADDING_GAS: "Gas usage for adding signature",
+            FinalAttr.MEAN_VERIFYING_GAS: "Gas usage for verifying signature",
             FinalAttr.BLOCK_SIZE: "Block size [bytes]",
-            FinalAttr.MEAN_SIGNING_TIME: "Mean duration [s] of signature creation",
+            FinalAttr.MEAN_SIGNING_TIME: "Duration [s] of signature creation",
         }
         return attributes_strs.get(self, "Unknown attribute")
 
@@ -128,13 +128,21 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
     :type num_of_trials: int
     """
     client, blockchain_priv_key = deploy_contract_and_get_account()
+
+    # to get proper values first run has to be discarded
+    priv_keys_list, pub_keys_list = generate_and_register_keys(blockchain_priv_key, client, 1)
+    signing_priv_key, _ = priv_keys_list.pop(), pub_keys_list.pop()
+    message = generate_random_scalar()
+    signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
+    client.store_signature(blockchain_priv_key, message, signature)
+
     header = "RING_SIZE,"
     header += ",".join(f"{attribute.name}" for attribute in FinalAttr)
     print(header)
     intermediate_results = np.zeros((num_of_trials, len(TestedAttr)), dtype=float)
 
     for curr_ring_size in range(1, max_ring_size + 1):
-        for i in range(num_of_trials):
+        for trial_idx in range(num_of_trials):
             # python generation part
             priv_keys_list, pub_keys_list = generate_and_register_keys(blockchain_priv_key, client, curr_ring_size)
             signing_priv_key, _ = priv_keys_list.pop(), pub_keys_list.pop()
@@ -142,16 +150,16 @@ def storing_vs_verifying(max_ring_size: int, num_of_trials: int):
             start_time = time.time()
             signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
             end_time = time.time()
-            intermediate_results[i][TestedAttr.SIGNING_TIME.value] = end_time - start_time
+            intermediate_results[trial_idx][TestedAttr.SIGNING_TIME.value] = end_time - start_time
 
             # action on blockchain
             receipt_add = client.store_signature(blockchain_priv_key, message, signature)
-            intermediate_results[i][TestedAttr.ADDING_GAS.value] = receipt_add.gasUsed
+            intermediate_results[trial_idx][TestedAttr.ADDING_GAS.value] = receipt_add.gasUsed
             arguments_to_verify = client.convert_nr_sign_sigma_to_sol_arguments(signature)
             gas_estimate = client.contract.functions.testVerifyNodeRingSignature(
                 message, *arguments_to_verify
             ).estimate_gas()
-            intermediate_results[i][TestedAttr.VERIFYING_GAS.value] = gas_estimate
+            intermediate_results[trial_idx][TestedAttr.VERIFYING_GAS.value] = gas_estimate
 
         mean_values = np.mean(intermediate_results, axis=0)
         std_values = np.std(intermediate_results, axis=0)
@@ -313,6 +321,14 @@ def aggregated_tests_tree(ring_sizes_list: list[int], heights_of_tree: list[int]
         block_sizes = np.zeros(len(TestType), dtype=int)
         for trial_idx in range(num_of_trials):
             client, blockchain_priv_key = deploy_contract_and_get_account()
+
+            # to get proper values first run has to be discarded
+            priv_keys_list, pub_keys_list = generate_and_register_keys(blockchain_priv_key, client, 1)
+            signing_priv_key, _ = priv_keys_list.pop(), pub_keys_list.pop()
+            message = generate_random_scalar()
+            signature = NodeRingSchnorrSignature.sign(message, signing_priv_key, pub_keys_list)[1]
+            client.store_signature(blockchain_priv_key, message, signature)
+
             priv_keys_list, pub_keys_list = generate_and_register_keys(
                 blockchain_priv_key, client, num_of_initial_pub_keys
             )

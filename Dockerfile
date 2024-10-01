@@ -1,4 +1,4 @@
-FROM node:slim as base
+FROM node:18-slim as base
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
@@ -17,7 +17,7 @@ WORKDIR /home/app
 COPY package.json /home/app
 COPY package-lock.json /home/app
 
-RUN npm install --quiet
+RUN npm install --quiet --lts
 
 COPY truffle-config.js /home/app
 COPY contracts /home/app/contracts
@@ -34,4 +34,5 @@ EXPOSE 8545
 
 ENTRYPOINT ganache -h 0.0.0.0 \
                    --wallet.accountKeysPath /home/accounts/accounts.json \
-                   --wallet.mnemonic "major arrive swarm best hungry lake amateur team float exotic sell fresh"
+                   --wallet.mnemonic "major arrive swarm best hungry lake amateur team float exotic sell fresh" \
+                   --wallet.defaultBalance 1000000000
