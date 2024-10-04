@@ -84,9 +84,7 @@ jobs:
       - name: Build Docker Image and Run Container
         if: matrix.platform == 'ubuntu-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-          docker-compose up -d
+          docker compose up -d
           sleep 15s
       - name: Display Ganache container IP
         if: matrix.platform == 'ubuntu-latest'
