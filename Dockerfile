@@ -1,4 +1,4 @@
-FROM node:18-slim as base
+FROM node:slim as base
 
 RUN apt-get update && \
     apt-get install --no-install-recommends -y \
@@ -7,7 +7,7 @@ RUN apt-get update && \
     rm -fr /var/lib/apt/lists/* && \
     rm -rf /etc/apt/sources.list.d/*
 
-RUN npm install --global --quiet npm truffle ganache
+RUN npm install --global --quiet truffle ganache
 
 FROM base as truffle
 
@@ -17,7 +17,7 @@ WORKDIR /home/app
 COPY package.json /home/app
 COPY package-lock.json /home/app
 
-RUN npm install --quiet --lts
+RUN npm install --quiet
 
 COPY truffle-config.js /home/app
 COPY contracts /home/app/contracts
